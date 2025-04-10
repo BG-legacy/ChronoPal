@@ -1,25 +1,18 @@
-export type Mood = 'happy' | 'normal' | 'sad';
-export type EvolutionStage = 'BABY' | 'CHILD' | 'TEEN' | 'ADULT';
-
 export interface Pet {
   id: string;
-  userId: string;
   name: string;
   species: string;
+  mood: string;
   level: number;
-  experience: number;
+  sass_level: number;
+  userId: string;
   lastFed: string;
-  lastPlayed: string;
-  lastCleaned: string;
-  evolution: EvolutionStage;
-  mood: Mood;
-  hunger: number;
-  cleanliness: number;
-  happiness: number;
-  intelligence: number;
+  lastInteraction: string;
+  interactionCount: number;
+  memoryLog: string[];
 }
 
-export interface PetAction {
+export type PetAction = {
   type: 'FEED' | 'PLAY' | 'TEACH';
-  timestamp: Date;
-} 
+  message?: string;
+}; 

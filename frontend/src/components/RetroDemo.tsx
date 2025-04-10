@@ -36,11 +36,14 @@ const RetroDemo: React.FC<RetroDemoProps> = ({ pet }) => {
               <p>Name: {pet.name}</p>
               <p>Species: {pet.species}</p>
               <p>Level: {pet.level}</p>
+              <p>Mood: {pet.mood}</p>
+              <p>Sass Level: {pet.sass_level}</p>
+              <p>Interactions: {pet.interactionCount}</p>
             </div>
             <div>
-              <p>Happiness: {pet.happiness}%</p>
-              <p>Hunger: {pet.hunger}%</p>
-              <p>Cleanliness: {pet.cleanliness}%</p>
+              <p>Last Fed: {new Date(pet.lastFed).toLocaleString()}</p>
+              <p>Last Interaction: {new Date(pet.lastInteraction).toLocaleString()}</p>
+              <p>Memories: {pet.memoryLog.length}</p>
             </div>
           </div>
         </div>

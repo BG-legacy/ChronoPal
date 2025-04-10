@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Pet } from '../types/pet';
-import { petService } from '../services/petService';
+import { apiService } from '../services/apiService';
 
 interface PetContextType {
   pet: Pet | null;
@@ -21,8 +21,8 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       setLoading(true);
       setError(null);
-      // For now, we'll just return null since we don't have a backend
-      setPet(null);
+      const petData = await apiService.getUserPet();
+      setPet(petData);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch pet'));
     } finally {
@@ -34,16 +34,22 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       setLoading(true);
       setError(null);
+      const now = new Date().toISOString();
       const newPet: Pet = {
         ...petData,
         id: Date.now().toString(),
         userId: 'default',
         species: 'Digital',
-        evolution: 'BABY',
         mood: 'happy',
-        intelligence: 50
+        level: 1,
+        sass_level: 1,
+        lastFed: now,
+        lastInteraction: now,
+        interactionCount: 0,
+        memoryLog: []
       };
-      setPet(newPet);
+      const savedPet = await apiService.savePet(newPet);
+      setPet(savedPet);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to create pet'));
       throw err;

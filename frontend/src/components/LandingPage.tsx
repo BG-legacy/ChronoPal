@@ -1,48 +1,23 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/RetroStyles.css';
-import { usePet } from '../contexts/PetContext';
 import catLogo from '../assets/cat.png';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { createPet } = usePet();
   const [onlineUsers] = React.useState(Math.floor(Math.random() * 100) + 50);
   const [totalVisitors] = React.useState(Math.floor(Math.random() * 100000) + 10000);
-
-  const handleStartJourney = async () => {
-    try {
-      await createPet({
-        name: 'ChronoPal',
-        species: 'Digital',
-        level: 1,
-        experience: 0,
-        lastFed: new Date().toISOString(),
-        lastPlayed: new Date().toISOString(),
-        lastCleaned: new Date().toISOString(),
-        evolution: 'BABY',
-        mood: 'happy',
-        hunger: 100,
-        cleanliness: 100,
-        happiness: 100,
-        intelligence: 50
-      });
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Failed to create pet:', error);
-    }
-  };
 
   return (
     <div className="retro-container">
       {/* Browser Notice */}
       <div className="retro-browser-notice">
-        Best viewed in Netscape Navigator 4.0 at 800x600 resolution
+        Best viewed in Netscape Navigator 4.0 or higher
       </div>
 
       {/* Marquee Announcement */}
       <div className="retro-marquee">
-        <span>🌟 Welcome to ChronoPal - Tamagotchi AI! 🌟 Play. Evolve. Connect! 🌟 Join Our Community! 🌟 Sign Our Guestbook! 🌟</span>
+        <span>Welcome to ChronoPal - Your Virtual Pet from the Future!</span>
       </div>
 
       {/* Header with User Counter */}
@@ -105,8 +80,11 @@ const LandingPage: React.FC = () => {
                 />
                 <h2 className="retro-title text-2xl mb-4">ChronoPal - Tamagotchi AI</h2>
                 <p className="mb-4 text-lg" style={{ color: '#0ff' }}>PLAY. EVOLVE. CONNECT!</p>
-                <button onClick={handleStartJourney} className="retro-button retro-glow">
-                  START YOUR JOURNEY!
+                <button 
+                  onClick={() => navigate('/login')}
+                  className="retro-button retro-glow"
+                >
+                  Start Your Journey
                 </button>
               </div>
               

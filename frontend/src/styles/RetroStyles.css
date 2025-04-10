@@ -442,3 +442,43 @@ body {
   transform: rotate(5deg);
   box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
 }
+
+/* Form Inputs */
+.retro-input {
+  background: #000;
+  border: 2px inset #3a5f94;
+  color: #0ff;
+  padding: 5px;
+  font-family: "Courier New", monospace;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.retro-input:focus {
+  outline: none;
+  border-color: #ff0;
+  box-shadow: 0 0 5px #ff0;
+}
+
+.retro-form {
+  margin: 20px 0;
+}
+
+/* Error Messages */
+.retro-error {
+  background: #000;
+  border: 2px ridge #f00;
+  color: #f00;
+  padding: 10px;
+  margin: 10px 0;
+  font-family: "Courier New", monospace;
+  text-align: center;
+  animation: blink 1s step-end infinite;
+}
+
+/* Loading State */
+.retro-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background: linear-gradient(to bottom, #666, #333);
+}

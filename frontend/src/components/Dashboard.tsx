@@ -1,13 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import PetDisplay from './PetDisplay';
 import ActionButtons from './ActionButtons';
 import Notification from './Notification';
 import { Pet, PetAction } from '../types/pet';
+import { apiService } from '../services/apiService';
 import '../styles/RetroStyles.css';
-
-interface DashboardProps {
-  pet: Pet;
-}
 
 interface ChatMessage {
   type: 'user' | 'ai';
@@ -15,8 +13,13 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
-  // Simulated action cooldown (3 seconds)
+const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
+  const [pet, setPet] = useState<Pet | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Action states
   const [actionCooldown, setActionCooldown] = useState(false);
   const [isFeeding, setIsFeeding] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -32,35 +35,95 @@ const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+
+  useEffect(() => {
+    const fetchPet = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const petData = await apiService.getUserPet();
+        setPet(petData);
+      } catch (err: any) {
+        console.error('Error fetching pet:', err);
+        if (err.message === 'No session ID found. Please log in.' || 
+            err.message === 'Session expired. Please log in again.') {
+          setError('Please log in to view your pet');
+          navigate('/login');
+        } else {
+          setError(err.message || 'Failed to fetch pet data');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPet();
+  }, [navigate]);
+
+  if (loading) {
+    return (
+      <div className="retro-container">
+        <div className="retro-panel">
+          <h2 className="retro-title">Loading your ChronoPal...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !pet) {
+    return (
+      <div className="retro-container">
+        <div className="retro-panel">
+          <h2 className="retro-title">Error</h2>
+          <p className="retro-error">{error || 'No pet found'}</p>
+          <button 
+            onClick={() => navigate('/login')}
+            className="retro-button"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
   
-  // Handle pet actions (Feed, Play, Teach)
-  const handleAction = (action: PetAction) => {
-    // Set cooldown
+  const handleAction = async (action: PetAction) => {
+    if (actionCooldown) return;
+    
     setActionCooldown(true);
     
-    // Update pet based on action type
-    switch (action.type) {
-      case 'FEED':
-        setIsFeeding(true);
-        setTimeout(() => setIsFeeding(false), 500); // Match animation duration
-        showNotification('ChronoPal is eating... Yum!', 'success');
-        break;
-        
-      case 'PLAY':
-        setIsPlaying(true);
-        setTimeout(() => setIsPlaying(false), 3000); // Match animation duration
-        showNotification('ChronoPal is playing and having fun!', 'success');
-        break;
-        
-      case 'TEACH':
-        setIsTeaching(true);
-        setTimeout(() => setIsTeaching(false), 2000); // Total duration for 2 iterations
-        showNotification('ChronoPal is learning new things!', 'info');
-        break;
+    try {
+      const updatedPet = await apiService.updateInteraction({
+        pet_id: pet.id,
+        interaction_type: action.type.toLowerCase(),
+        message: action.message
+      });
+      
+      setPet(updatedPet);
+      
+      // Set animation states
+      switch (action.type) {
+        case 'FEED':
+          setIsFeeding(true);
+          setTimeout(() => setIsFeeding(false), 500);
+          showNotification('ChronoPal is eating... Yum!', 'success');
+          break;
+        case 'PLAY':
+          setIsPlaying(true);
+          setTimeout(() => setIsPlaying(false), 3000);
+          showNotification('ChronoPal is playing and having fun!', 'success');
+          break;
+        case 'TEACH':
+          setIsTeaching(true);
+          setTimeout(() => setIsTeaching(false), 2000);
+          showNotification('ChronoPal is learning new things!', 'info');
+          break;
+      }
+    } catch (err) {
+      showNotification('Failed to perform action', 'warning');
+    } finally {
+      setTimeout(() => setActionCooldown(false), 3000);
     }
-    
-    // Reset cooldown after 3 seconds
-    setTimeout(() => setActionCooldown(false), 3000);
   };
   
   const showNotification = (message: string, type: 'success' | 'warning' | 'info') => {
@@ -76,9 +139,8 @@ const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
   };
 
   const handleSendMessage = async () => {
-    if (!userInput.trim()) return;
+    if (!userInput.trim() || !pet) return;
 
-    // Add user message to chat
     const userMessage: ChatMessage = {
       type: 'user',
       content: userInput,
@@ -89,55 +151,22 @@ const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
     setIsTyping(true);
 
     try {
-      // Simulate AI response with a more direct, friendly style
-      setTimeout(() => {
-        const aiResponse: ChatMessage = {
-          type: 'ai',
-          content: generatePetResponse(userInput),
-          timestamp: new Date()
-        };
-        setChatMessages(prev => [...prev, aiResponse]);
-        setIsTyping(false);
-      }, 1000);
+      const response = await apiService.chatWithPet({
+        message: userInput,
+        pet_id: pet.id
+      });
+      
+      const aiMessage: ChatMessage = {
+        type: 'ai',
+        content: response.response,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, aiMessage]);
     } catch (error) {
       showNotification('Error communicating with ChronoPal', 'warning');
+    } finally {
       setIsTyping(false);
     }
-  };
-
-  // Add a function to generate contextual pet responses
-  const generatePetResponse = (input: string) => {
-    const lowerInput = input.toLowerCase();
-    
-    if (lowerInput.includes('how are you') || lowerInput.includes('how do you feel')) {
-      return `I'm feeling ${pet.happiness > 80 ? 'super happy' : pet.happiness > 50 ? 'pretty good' : 'a bit down'}! ${pet.hunger < 50 ? 'Could use a snack though!' : ''}`;
-    }
-    
-    if (lowerInput.includes('play') || lowerInput.includes('game')) {
-      return `Yes! I love playing games! ${pet.happiness < 70 ? 'It would really cheer me up!' : 'It will be so much fun!'}`;
-    }
-    
-    if (lowerInput.includes('food') || lowerInput.includes('hungry') || lowerInput.includes('eat')) {
-      return `${pet.hunger < 50 ? 'Yes, I am getting hungry! Feed me please!' : 'I\'m pretty full right now, but thanks for asking!'}`;
-    }
-    
-    if (lowerInput.includes('learn') || lowerInput.includes('teach') || lowerInput.includes('smart')) {
-      return `${pet.intelligence < 70 ? 'I love learning new things! Teach me more!' : 'I\'ve learned so much already, but there\'s always more to discover!'}`;
-    }
-    
-    if (lowerInput.includes('name')) {
-      return `I'm ${pet.name}, your digital friend! Nice to chat with you!`;
-    }
-    
-    // Default responses based on pet's mood
-    const defaultResponses = [
-      `*wiggles happily* What shall we do next?`,
-      `I'm so glad you're here! Want to play or learn something new?`,
-      `*bounces excitedly* I love chatting with you!`,
-      `Let's do something fun together!`
-    ];
-    
-    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
   };
 
   return (
@@ -188,89 +217,49 @@ const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
                   <span>{pet.level}</span>
                 </div>
                 <div className="player-row">
-                  <span>Hunger:</span>
-                  <span>{pet.hunger}/100</span>
+                  <span>Mood:</span>
+                  <span>{pet.mood}</span>
                 </div>
                 <div className="player-row">
-                  <span>Happiness:</span>
-                  <span>{pet.happiness}/100</span>
+                  <span>Sass Level:</span>
+                  <span>{pet.sass_level}</span>
                 </div>
                 <div className="player-row">
-                  <span>Intelligence:</span>
-                  <span>{pet.intelligence}/100</span>
+                  <span>Interactions:</span>
+                  <span>{pet.interactionCount}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* AI Chat Section */}
+          {/* Chat Section */}
           <div className="retro-table-row">
             <div className="retro-table-cell" style={{ gridColumn: '1 / -1' }}>
-              <div className="section-header">Ask ChronoPal</div>
-              <div className="retro-card">
-                {/* Chat Messages */}
-                <div className="chat-messages" style={{ 
-                  height: '200px', 
-                  overflowY: 'auto',
-                  border: '1px solid #0ff',
-                  padding: '10px',
-                  marginBottom: '10px',
-                  backgroundColor: '#000',
-                  color: '#0ff',
-                  fontFamily: 'Courier New, monospace'
-                }}>
-                  {chatMessages.map((message, index) => (
-                    <div key={index} style={{ 
-                      marginBottom: '10px',
-                      padding: '5px',
-                      borderLeft: `3px solid ${message.type === 'user' ? '#0f0' : '#f0f'}`,
-                      backgroundColor: '#000'
-                    }}>
-                      <div style={{ 
-                        color: message.type === 'user' ? '#0f0' : '#f0f',
-                        fontWeight: 'bold',
-                        marginBottom: '5px'
-                      }}>
-                        {message.type === 'user' ? 'You:' : 'ChronoPal:'}
-                      </div>
-                      <div style={{ whiteSpace: 'pre-wrap' }}>
-                        {message.content}
-                      </div>
-                      <div style={{ 
-                        fontSize: '10px',
-                        color: '#666',
-                        textAlign: 'right'
-                      }}>
-                        {message.timestamp.toLocaleTimeString()}
-                      </div>
+              <div className="section-header">Chat with ChronoPal</div>
+              <div className="chat-container">
+                <div className="chat-messages">
+                  {chatMessages.map((msg, index) => (
+                    <div key={index} className={`chat-message ${msg.type}`}>
+                      <span className="message-content">{msg.content}</span>
+                      <span className="message-time">
+                        {msg.timestamp.toLocaleTimeString()}
+                      </span>
                     </div>
                   ))}
                   {isTyping && (
-                    <div style={{ 
-                      color: '#f0f',
-                      fontStyle: 'italic'
-                    }}>
-                      ChronoPal is thinking...
+                    <div className="chat-message ai typing">
+                      ChronoPal is typing...
                     </div>
                   )}
                 </div>
-
-                {/* Chat Input */}
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="chat-input">
                   <input
                     type="text"
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Ask ChronoPal anything..."
-                    style={{
-                      flex: 1,
-                      padding: '8px',
-                      backgroundColor: '#000',
-                      color: '#0ff',
-                      border: '1px solid #0ff',
-                      fontFamily: 'Courier New, monospace'
-                    }}
+                    placeholder="Type your message..."
+                    className="retro-input"
                   />
                   <button
                     onClick={handleSendMessage}
@@ -286,23 +275,15 @@ const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="retro-footer">
-        <div className="hit-counter">Visitors: 000001</div>
-        <div className="web-ring">
-          <div className="web-ring-title">Web Ring</div>
-          <a href="#" className="retro-link">Previous Site</a>
-          <a href="#" className="retro-link">Next Site</a>
-        </div>
-        <div className="under-construction"></div>
-      </div>
-
-      <Notification
-        show={notification.show}
-        message={notification.message}
-        type={notification.type}
-        onClose={closeNotification}
-      />
+      {/* Notification */}
+      {notification.show && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={closeNotification}
+          show={notification.show}
+        />
+      )}
     </div>
   );
 };

@@ -54,22 +54,44 @@ async def get_current_user(session_id: str = Header(None, alias="session-id")):
 @router.post("/register", response_model=User)
 async def register(user: UserCreate):
     try:
+        print(f"Received registration request: {user.model_dump()}")
+        
+        # Validate input
+        if not user.email or not user.password or not user.username:
+            print(f"Missing required fields: email={user.email}, password={user.password}, username={user.username}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email, password, and username are required"
+            )
+        
         # Check if user already exists
         existing_user = await UserDB.get_user_by_email(user.email)
         if existing_user:
+            print(f"User already exists with email: {user.email}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email already registered"
             )
         
         # Create new user
-        return await UserDB.create_user(user)
+        try:
+            print("Attempting to create user...")
+            created_user = await UserDB.create_user(user)
+            print(f"Successfully created user: {created_user.model_dump()}")
+            return created_user
+        except Exception as e:
+            print(f"Error creating user: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to create user: {str(e)}"
+            )
+    except HTTPException:
+        raise
     except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
+        print(f"Unexpected error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail=f"An unexpected error occurred: {str(e)}"
         )
 
 @router.post("/login")

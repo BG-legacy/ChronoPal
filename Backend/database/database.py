@@ -16,14 +16,35 @@ load_dotenv()
 MONGODB_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("MONGODB_DB_NAME")
 
+if not MONGODB_URI or not DB_NAME:
+    raise ValueError("MongoDB connection settings are not properly configured in environment variables")
+
 # Initialize MongoDB client with simplified SSL settings
-client = MongoClient(MONGODB_URI, connectTimeoutMS=30000, socketTimeoutMS=30000)
+client = MongoClient(MONGODB_URI, 
+                    connectTimeoutMS=30000, 
+                    socketTimeoutMS=30000,
+                    serverSelectionTimeoutMS=5000,
+                    retryWrites=True,
+                    w="majority")
+
+# Test the connection
+try:
+    client.server_info()
+except Exception as e:
+    raise ConnectionError(f"Failed to connect to MongoDB: {str(e)}")
+
 db = client[DB_NAME]
 pets_collection = db["pets"]
 users_collection = db["users"]
 
 # Async client for FastAPI with simplified SSL settings
-async_client = AsyncIOMotorClient(MONGODB_URI, connectTimeoutMS=30000, socketTimeoutMS=30000)
+async_client = AsyncIOMotorClient(MONGODB_URI, 
+                                 connectTimeoutMS=30000, 
+                                 socketTimeoutMS=30000,
+                                 serverSelectionTimeoutMS=5000,
+                                 retryWrites=True,
+                                 w="majority")
+
 async_db = async_client[DB_NAME]
 async_pets_collection = async_db["pets"]
 async_users_collection = async_db["users"]
