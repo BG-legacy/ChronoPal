@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/RetroStyles.css';
 import { usePet } from '../contexts/PetContext';
+import catLogo from '../assets/cat.png';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,13 +42,13 @@ const LandingPage: React.FC = () => {
 
       {/* Marquee Announcement */}
       <div className="retro-marquee">
-        <span>🌟 Welcome to ChronoPal 2000 - Your Time-Traveling Digital Pet! 🌟 New Features Coming Soon! 🌟 Join Our Community! 🌟 Sign Our Guestbook! 🌟</span>
+        <span>🌟 Welcome to ChronoPal - Tamagotchi AI! 🌟 Play. Evolve. Connect! 🌟 Join Our Community! 🌟 Sign Our Guestbook! 🌟</span>
       </div>
 
       {/* Header with User Counter */}
       <div className="retro-header">
         <div className="flex justify-between items-center">
-          <h1 className="retro-title retro-glow text-3xl">ChronoPal 2000</h1>
+          <h1 className="retro-title retro-glow text-3xl">ChronoPal</h1>
           <div className="retro-counter">
             <span className="retro-blink">●</span> {onlineUsers} Users Online
           </div>
@@ -91,9 +92,19 @@ const LandingPage: React.FC = () => {
           {/* Main Content */}
           <div className="retro-table-cell" style={{ width: '60%' }}>
             <div className="retro-panel">
-              <h2 className="retro-title text-2xl mb-4">Welcome to ChronoPal 2000!</h2>
               <div className="text-center mb-6">
-                <img src="/chronopal-logo.png" alt="ChronoPal" className="mx-auto mb-4" style={{ imageRendering: 'pixelated' }} />
+                <img 
+                  src={catLogo} 
+                  alt="ChronoPal" 
+                  className="mx-auto mb-4 animate-pet-float" 
+                  style={{ 
+                    imageRendering: 'pixelated',
+                    width: '120px',
+                    height: '120px'
+                  }} 
+                />
+                <h2 className="retro-title text-2xl mb-4">ChronoPal - Tamagotchi AI</h2>
+                <p className="mb-4 text-lg" style={{ color: '#0ff' }}>PLAY. EVOLVE. CONNECT!</p>
                 <button onClick={handleStartJourney} className="retro-button retro-glow">
                   START YOUR JOURNEY!
                 </button>

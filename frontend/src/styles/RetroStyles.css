@@ -88,60 +88,6 @@ body {
   );
 }
 
-/* Navigation */
-.retro-nav {
-  background: #000000;
-  border: 1px solid #0066ff;
-  padding: 5px;
-  margin: 10px 0;
-  display: flex;
-  justify-content: center;
-  position: relative;
-}
-
-.retro-nav::before,
-.retro-nav::after {
-  content: "◄►";
-  position: absolute;
-  top: -8px;
-  color: #ffff00;
-  font-size: 16px;
-}
-
-.retro-nav::before {
-  left: 48%;
-}
-
-.retro-nav::after {
-  right: 48%;
-}
-
-.retro-nav-button {
-  background: #000000;
-  border: 3px outset #0000ff;
-  border-radius: 0;
-  color: #fff;
-  padding: 8px 15px;
-  font-weight: bold;
-  text-shadow: 2px 2px 0 #000;
-  cursor: pointer;
-  font-family: "Arial Black", sans-serif;
-  margin: 0 2px;
-}
-
-.retro-nav-button:active {
-  border-style: inset;
-  background: #000000;
-  padding-top: 9px;
-  padding-bottom: 7px;
-}
-
-.retro-nav-button:hover {
-  background: #000000;
-  color: #ff0;
-  text-decoration: underline;
-}
-
 /* Content Panels */
 .retro-panel {
   background: #000000;

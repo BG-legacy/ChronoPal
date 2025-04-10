@@ -15,6 +15,9 @@ module.exports = {
         'glitch': 'glitch 1s linear infinite',
         'scanline': 'scanline 8s linear infinite',
         'retro-flicker': 'retro-flicker 0.15s infinite',
+        'pet-eating': 'pet-eating 0.5s ease-in-out',
+        'pet-playing': 'pet-playing 1s ease-in-out',
+        'pet-teaching': 'pet-teaching 1s ease-in-out',
       },
       keyframes: {
         'pixel-pulse': {
@@ -24,6 +27,26 @@ module.exports = {
         'pet-float': {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-10px)' },
+        },
+        'pet-eating': {
+          '0%': { transform: 'scale(1.2) rotate(0deg)' },
+          '25%': { transform: 'scale(1.2) rotate(-10deg)' },
+          '75%': { transform: 'scale(1.2) rotate(10deg)' },
+          '100%': { transform: 'scale(1.2) rotate(0deg)' },
+        },
+        'pet-playing': {
+          '0%': { transform: 'scale(1.2) translateY(0) rotate(0deg)' },
+          '25%': { transform: 'scale(1.3) translateY(-15px) rotate(-15deg)' },
+          '50%': { transform: 'scale(1.2) translateY(0) rotate(0deg)' },
+          '75%': { transform: 'scale(1.3) translateY(-15px) rotate(15deg)' },
+          '100%': { transform: 'scale(1.2) translateY(0) rotate(0deg)' },
+        },
+        'pet-teaching': {
+          '0%': { transform: 'scale(1.2) translateY(0)' },
+          '25%': { transform: 'scale(1.25) translateY(-5px)' },
+          '50%': { transform: 'scale(1.2) translateY(0)' },
+          '75%': { transform: 'scale(1.25) translateY(-5px)' },
+          '100%': { transform: 'scale(1.2) translateY(0)' },
         },
         'glitch': {
           '0%': { transform: 'translate(0)' },

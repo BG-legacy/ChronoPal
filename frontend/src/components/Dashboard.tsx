@@ -18,6 +18,9 @@ interface ChatMessage {
 const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
   // Simulated action cooldown (3 seconds)
   const [actionCooldown, setActionCooldown] = useState(false);
+  const [isFeeding, setIsFeeding] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isTeaching, setIsTeaching] = useState(false);
   
   // Notification state
   const [notification, setNotification] = useState({
@@ -38,17 +41,20 @@ const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
     // Update pet based on action type
     switch (action.type) {
       case 'FEED':
-        // TODO: Call API to update pet
+        setIsFeeding(true);
+        setTimeout(() => setIsFeeding(false), 500); // Match animation duration
         showNotification('ChronoPal is eating... Yum!', 'success');
         break;
         
       case 'PLAY':
-        // TODO: Call API to update pet
+        setIsPlaying(true);
+        setTimeout(() => setIsPlaying(false), 3000); // Match animation duration
         showNotification('ChronoPal is playing and having fun!', 'success');
         break;
         
       case 'TEACH':
-        // TODO: Call API to update pet
+        setIsTeaching(true);
+        setTimeout(() => setIsTeaching(false), 2000); // Total duration for 2 iterations
         showNotification('ChronoPal is learning new things!', 'info');
         break;
     }
@@ -83,20 +89,55 @@ const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
     setIsTyping(true);
 
     try {
-      // Simulate AI response (replace with actual API call)
+      // Simulate AI response with a more direct, friendly style
       setTimeout(() => {
         const aiResponse: ChatMessage = {
           type: 'ai',
-          content: `*Processing your question about "${userInput}"...*\n\nAs a time-traveling AI companion, I'm analyzing your question through the lens of past and future knowledge. Let me consult my digital archives...`,
+          content: generatePetResponse(userInput),
           timestamp: new Date()
         };
         setChatMessages(prev => [...prev, aiResponse]);
         setIsTyping(false);
-      }, 1500);
+      }, 1000);
     } catch (error) {
       showNotification('Error communicating with ChronoPal', 'warning');
       setIsTyping(false);
     }
+  };
+
+  // Add a function to generate contextual pet responses
+  const generatePetResponse = (input: string) => {
+    const lowerInput = input.toLowerCase();
+    
+    if (lowerInput.includes('how are you') || lowerInput.includes('how do you feel')) {
+      return `I'm feeling ${pet.happiness > 80 ? 'super happy' : pet.happiness > 50 ? 'pretty good' : 'a bit down'}! ${pet.hunger < 50 ? 'Could use a snack though!' : ''}`;
+    }
+    
+    if (lowerInput.includes('play') || lowerInput.includes('game')) {
+      return `Yes! I love playing games! ${pet.happiness < 70 ? 'It would really cheer me up!' : 'It will be so much fun!'}`;
+    }
+    
+    if (lowerInput.includes('food') || lowerInput.includes('hungry') || lowerInput.includes('eat')) {
+      return `${pet.hunger < 50 ? 'Yes, I am getting hungry! Feed me please!' : 'I\'m pretty full right now, but thanks for asking!'}`;
+    }
+    
+    if (lowerInput.includes('learn') || lowerInput.includes('teach') || lowerInput.includes('smart')) {
+      return `${pet.intelligence < 70 ? 'I love learning new things! Teach me more!' : 'I\'ve learned so much already, but there\'s always more to discover!'}`;
+    }
+    
+    if (lowerInput.includes('name')) {
+      return `I'm ${pet.name}, your digital friend! Nice to chat with you!`;
+    }
+    
+    // Default responses based on pet's mood
+    const defaultResponses = [
+      `*wiggles happily* What shall we do next?`,
+      `I'm so glad you're here! Want to play or learn something new?`,
+      `*bounces excitedly* I love chatting with you!`,
+      `Let's do something fun together!`
+    ];
+    
+    return defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
   };
 
   return (
@@ -109,15 +150,7 @@ const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
       {/* Main Header */}
       <div className="retro-header">
         <h1 className="site-title">ChronoPal</h1>
-        <p className="retro-title">Your Digital Time-Traveling Companion</p>
-      </div>
-
-      {/* Navigation */}
-      <div className="retro-nav">
-        <button className="retro-nav-button">Home</button>
-        <button className="retro-nav-button">Feed</button>
-        <button className="retro-nav-button">Play</button>
-        <button className="retro-nav-button">Teach</button>
+        <p className="retro-title">Your l33t Digital BFF from Y2K!</p>
       </div>
 
       {/* Main Content */}
@@ -127,7 +160,12 @@ const Dashboard: React.FC<DashboardProps> = ({ pet }) => {
             {/* Pet Display */}
             <div className="retro-table-cell">
               <div className="section-header">Your ChronoPal</div>
-              <PetDisplay pet={pet} />
+              <PetDisplay 
+                pet={pet} 
+                isFeeding={isFeeding}
+                isPlaying={isPlaying}
+                isTeaching={isTeaching}
+              />
             </div>
 
             {/* Actions */}

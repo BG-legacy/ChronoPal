@@ -1,28 +1,118 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pet, Mood, EvolutionStage } from '../types/pet';
-import { PET_SPRITES } from '../assets/pet-sprites';
+import catPixelArt from '../assets/petlog.png';
 
 interface PetDisplayProps {
   pet: Pet;
+  isFeeding?: boolean;
+  isPlaying?: boolean;
+  isTeaching?: boolean;
 }
 
-const PetDisplay: React.FC<PetDisplayProps> = ({ pet }) => {
-  // Get the appropriate sprite based on pet's evolution stage and mood
-  const getSprite = (evolution: EvolutionStage, mood: Mood) => {
-    return PET_SPRITES[evolution][mood];
-  };
+const PetDisplay: React.FC<PetDisplayProps> = ({ 
+  pet, 
+  isFeeding = false, 
+  isPlaying = false,
+  isTeaching = false 
+}) => {
+  const [isEating, setIsEating] = useState(false);
+  const [isPlayingAnim, setIsPlayingAnim] = useState(false);
+  const [isLearning, setIsLearning] = useState(false);
+  const [playCount, setPlayCount] = useState(0);
+  const [teachCount, setTeachCount] = useState(0);
+
+  useEffect(() => {
+    if (isFeeding) {
+      setIsEating(true);
+      const timer = setTimeout(() => {
+        setIsEating(false);
+      }, 500); // Match animation duration
+      return () => clearTimeout(timer);
+    }
+  }, [isFeeding]);
+
+  useEffect(() => {
+    if (isPlaying) {
+      setIsPlayingAnim(true);
+      setPlayCount(3); // Play animation 3 times
+      
+      const playTimer = setInterval(() => {
+        setPlayCount(prev => {
+          if (prev <= 1) {
+            clearInterval(playTimer);
+            setIsPlayingAnim(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000); // Each animation is 1s
+
+      return () => {
+        clearInterval(playTimer);
+        setIsPlayingAnim(false);
+        setPlayCount(0);
+      };
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (isTeaching) {
+      setIsLearning(true);
+      setTeachCount(2); // Teaching animation 2 times
+      
+      const teachTimer = setInterval(() => {
+        setTeachCount(prev => {
+          if (prev <= 1) {
+            clearInterval(teachTimer);
+            setIsLearning(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000); // Each animation is 1s
+
+      return () => {
+        clearInterval(teachTimer);
+        setIsLearning(false);
+        setTeachCount(0);
+      };
+    }
+  }, [isTeaching]);
 
   // Calculate level progress percentage
   const levelProgress = (pet.level % 10) * 10; // Assuming 10 levels per evolution stage
 
+  const getAnimation = () => {
+    if (isEating) return 'animate-pet-eating';
+    if (isPlayingAnim) return 'animate-pet-playing';
+    if (isLearning) return 'animate-pet-teaching';
+    return 'animate-pet-float';
+  };
+
+  const getIterationCount = () => {
+    if (isPlayingAnim) return playCount;
+    if (isLearning) return teachCount;
+    if (isEating) return 1;
+    return 'infinite';
+  };
+
   return (
     <div className="flex flex-col items-center">
       {/* Pet sprite */}
-      <div className="w-32 h-32 mb-4 animate-pet-float">
+      <div 
+        className={`w-20 h-20 mb-4 ${getAnimation()}`}
+        style={{
+          animationIterationCount: getIterationCount()
+        }}
+      >
         <img 
-          src={getSprite(pet.evolution, pet.mood)} 
+          src={catPixelArt} 
           alt={`${pet.name} - ${pet.evolution} ${pet.mood}`}
-          className="w-full h-full object-contain"
+          className="w-full h-full object-contain pixelated"
+          style={{
+            imageRendering: 'pixelated',
+            transform: `scale(1.2)`,
+          }}
         />
       </div>
 
