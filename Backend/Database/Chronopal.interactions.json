@@ -1,8 +1,0 @@
-[{
-  "_id": {
-    "$oid": "67f7013f966131813b39ab78"
-  },
-  "userId": "user-abc-123",
-  "type": "feed",
-  "timestamp": "2025-04-09T02:04:00Z"
-}]
