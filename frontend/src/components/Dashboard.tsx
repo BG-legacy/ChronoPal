@@ -11,6 +11,7 @@ interface ChatMessage {
   type: 'user' | 'ai';
   content: string;
   timestamp: Date;
+  isTyping?: boolean;
 }
 
 const Dashboard: React.FC = () => {
@@ -322,18 +323,18 @@ const Dashboard: React.FC = () => {
       switch (action.type) {
         case 'FEED':
           setIsFeeding(true);
-          setTimeout(() => setIsFeeding(false), 3000); // 3 seconds of feeding animation
+          setTimeout(() => setIsFeeding(false), 1500); // Reduced from 3000 to 1500ms
           showNotification('ChronoPal is eating... Yum! Battery increased by 10%', 'success');
           break;
         case 'PLAY':
           setIsPlaying(true);
-          setTimeout(() => setIsPlaying(false), 4000); // 4 seconds of playing animation
+          setTimeout(() => setIsPlaying(false), 2000); // Reduced from 4000 to 2000ms
           showNotification('ChronoPal is playing and having fun! Battery increased by 5%', 'success');
           break;
         case 'TEACH':
           setIsTeaching(true);
           // Keep teaching animation active until response is received
-          setTimeout(() => setIsTeaching(false), 4000); // Extend to 4 seconds
+          setTimeout(() => setIsTeaching(false), 2000); // Reduced from 4000 to 2000ms
           showNotification('ChronoPal is learning new things! Battery increased by 7%', 'info');
           
           // Add a personalized response from the pet to what was taught
@@ -412,6 +413,11 @@ const Dashboard: React.FC = () => {
       message,
       type
     });
+    
+    // Auto-hide notification after 2 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 2000);
   };
   
   const closeNotification = () => {
@@ -436,26 +442,43 @@ const Dashboard: React.FC = () => {
       setChatMessages(prev => [...prev, userMessage]);
       setUserInput('');
 
+      // Add a small delay to simulate thinking
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
       try {
-        // The API service now handles getting the correct pet ID
         const response = await apiService.chatWithPet({
           message: userMessage.content,
-          pet_id: pet.id || '' // This will be overridden by the apiService
+          pet_id: pet.id || ''
         });
         
-        const aiMessage: ChatMessage = {
+        // Add a typing indicator message
+        const typingMessage: ChatMessage = {
           type: 'ai',
-          content: response.response,
-          timestamp: new Date()
+          content: '...',
+          timestamp: new Date(),
+          isTyping: true
         };
-        setChatMessages(prev => [...prev, aiMessage]);
+        setChatMessages(prev => [...prev, typingMessage]);
+        
+        // Simulate typing delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Remove typing indicator and add actual response
+        setChatMessages(prev => {
+          const newMessages = prev.filter(msg => !msg.isTyping);
+          const aiMessage: ChatMessage = {
+            type: 'ai',
+            content: response.response,
+            timestamp: new Date()
+          };
+          return [...newMessages, aiMessage];
+        });
         
         // Chatting depletes battery slightly
         setPet(prevPet => {
           if (prevPet) {
             const newBatteryLevel = Math.max(0, (prevPet.batteryLevel || 100) - 3);
             
-            // Check if pet died from this action
             if (newBatteryLevel <= 0 && (prevPet.batteryLevel || 0) > 0) {
               setTimeout(() => handlePetDeath(), 1000);
             }
@@ -472,7 +495,6 @@ const Dashboard: React.FC = () => {
         try {
           const refreshedPet = await apiService.getUserPet();
           if (refreshedPet) {
-            // Keep the battery level that we're managing client-side
             const currentBatteryLevel = pet.batteryLevel;
             setPet({
               ...refreshedPet,
@@ -485,7 +507,6 @@ const Dashboard: React.FC = () => {
       } catch (apiErr) {
         console.error('API error during chat:', apiErr);
         
-        // Generate a fallback response
         const fallbackResponses = [
           "OMG, like, the internet connection is totally buggin'! Can we chat later?",
           "Whoa, server drama! Let's pretend I said something super clever.",
@@ -677,16 +698,32 @@ const Dashboard: React.FC = () => {
             <div className="chat-section">
               <div className="chat-messages">
                 {chatMessages.map((msg, index) => (
-                  <div key={index} className={`chat-message ${msg.type}`}>
-                    <span className="message-content">{msg.content}</span>
-                    <span className="message-time">
-                      {msg.timestamp.toLocaleTimeString()}
+                  <div key={index} className={`chat-message ${msg.type} ${msg.isTyping ? 'typing' : ''}`}>
+                    <span className="message-content">
+                      {msg.isTyping ? (
+                        <span className="typing-indicator">
+                          <span className="dot">.</span>
+                          <span className="dot">.</span>
+                          <span className="dot">.</span>
+                        </span>
+                      ) : (
+                        msg.content
+                      )}
                     </span>
+                    {!msg.isTyping && (
+                      <span className="message-time">
+                        {msg.timestamp.toLocaleTimeString()}
+                      </span>
+                    )}
                   </div>
                 ))}
-                {isTyping && (
+                {isTyping && !chatMessages.some(msg => msg.isTyping) && (
                   <div className="chat-message ai typing">
-                    ChronoPal is typing...
+                    <span className="typing-indicator">
+                      <span className="dot">.</span>
+                      <span className="dot">.</span>
+                      <span className="dot">.</span>
+                    </span>
                   </div>
                 )}
                 {chatMessages.length === 0 && !petDead && (

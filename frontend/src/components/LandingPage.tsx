@@ -142,11 +142,6 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="retro-container">
-      {/* Browser Notice */}
-      <div className="retro-browser-notice">
-        Best viewed in Netscape Navigator 4.0 or higher at 800x600 resolution
-      </div>
-
       {/* Old-school popup */}
       {showWelcome && (
         <div className="retro-popup">
@@ -297,11 +292,6 @@ const LandingPage: React.FC = () => {
 
       {/* Under Construction Corner */}
       <div className="under-construction"></div>
-
-      {/* Best Viewed Notice */}
-      <div className="best-viewed">
-        Best viewed with<br/>Netscape Navigator
-      </div>
     </div>
   );
 };

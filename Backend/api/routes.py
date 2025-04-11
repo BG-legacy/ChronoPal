@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Header, Request
-from typing import Optional
+from typing import Optional, Dict, Any, List, Callable
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import os
@@ -9,6 +9,7 @@ from database.user_schema import User, UserCreate, UserLogin
 from database.database import PetDB, UserDB
 from .ai_personality import get_chronopal_response
 from bson import ObjectId
+import certifi
 
 # Load environment variables
 load_dotenv()
@@ -17,13 +18,35 @@ router = APIRouter()
 
 # Store active sessions (in production, use a proper session store)
 active_sessions = {}
+get_mongo_client_func = None
 
-# Function to set the active_sessions from main.py
+# Store session management functions
+session_functions = None
+
 def set_active_sessions(sessions_dict):
     """Set the active sessions dictionary from the main app"""
     global active_sessions
     active_sessions = sessions_dict
     print(f"Session store initialized with {len(active_sessions)} existing sessions")
+
+def set_mongo_client(client_func: Callable):
+    """Set the MongoDB client function from main app.
+    
+    This function sets the global get_mongo_client_func that is used by the database
+    operations to get a MongoDB client instance.
+    
+    Args:
+        client_func: A callable that returns a MongoDB client instance
+    """
+    global get_mongo_client_func
+    get_mongo_client_func = client_func
+    print("MongoDB client function initialized")
+
+def set_session_functions(functions_dict: dict):
+    """Set the session management functions from the main app"""
+    global session_functions
+    session_functions = functions_dict
+    print("Session management functions initialized")
 
 # Simple health check endpoint
 @router.get("/health")
@@ -76,21 +99,26 @@ async def get_current_user(session_id: str = Header(None, alias="session-id")):
         )
     
     print(f"[AUTH DEBUG] Session ID received: {session_id[:8]}...")
-    print(f"[AUTH DEBUG] Active sessions: {list(active_sessions.keys())[:5] if active_sessions else 'None'}")
     
-    user_id = active_sessions.get(session_id)
-    if not user_id:
-        print(f"[AUTH ERROR] Session ID not found in active sessions: {session_id[:8]}...")
+    if not session_functions:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Session management not initialized"
+        )
+    
+    session = await session_functions["get_session"](session_id)
+    if not session:
+        print(f"[AUTH ERROR] Session not found or expired: {session_id[:8]}...")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid session"
         )
     
-    print(f"[AUTH DEBUG] Found user_id: {user_id} for session: {session_id[:8]}...")
+    print(f"[AUTH DEBUG] Found user_id: {session['user_id']} for session: {session_id[:8]}...")
     
-    user = await UserDB.get_user_by_id(user_id)
+    user = await UserDB.get_user_by_id(session['user_id'])
     if not user:
-        print(f"[AUTH ERROR] User not found for ID: {user_id}")
+        print(f"[AUTH ERROR] User not found for ID: {session['user_id']}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found"
@@ -127,6 +155,16 @@ async def register(user: UserCreate):
             print("Attempting to create user...")
             created_user = await UserDB.create_user(user)
             print(f"Successfully created user: {created_user.model_dump()}")
+            
+            # Create session if session management is available
+            if session_functions and session_functions.get("create_session"):
+                try:
+                    session_id = await session_functions["create_session"](str(created_user.id))
+                    print(f"Created session for new user: {session_id[:8]}...")
+                except Exception as session_error:
+                    print(f"Warning: Failed to create session for new user: {str(session_error)}")
+                    # Don't fail registration if session creation fails
+            
             return created_user
         except Exception as e:
             print(f"Error creating user: {str(e)}")
@@ -162,12 +200,16 @@ async def login(user_login: UserLogin):
             detail="Incorrect email or password"
         )
     
-    # Create a simple session (in production, use proper session management)
-    session_id = str(os.urandom(16).hex())
-    active_sessions[session_id] = str(user.id)
+    if not session_functions:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Session management not initialized"
+        )
+    
+    # Create a session in MongoDB
+    session_id = await session_functions["create_session"](str(user.id))
     
     print(f"[LOGIN SUCCESS] Created session {session_id[:8]}... for user {user.username} (ID: {user.id})")
-    print(f"[SESSION DEBUG] Total active sessions: {len(active_sessions)}")
     
     return {"session_id": session_id, "user": user}
 
@@ -179,8 +221,13 @@ async def logout(session_id: str = Header(None, alias="session-id")):
             detail="Not authenticated"
         )
     
-    if session_id in active_sessions:
-        del active_sessions[session_id]
+    if not session_functions:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Session management not initialized"
+        )
+    
+    await session_functions["delete_session"](session_id)
     return {"message": "Logged out successfully"}
 
 # Protected routes
@@ -800,4 +847,28 @@ async def reset_pet(current_user: User = Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset pet: {str(e)}"
-        ) 
+        )
+
+# Test endpoint
+@router.get("/test")
+async def test_endpoint():
+    """Test endpoint to verify API is running"""
+    return {"status": "ok", "message": "API is running"}
+
+# MongoDB test endpoint
+@router.get("/test-mongodb")
+async def test_mongodb():
+    """Test endpoint to verify MongoDB connection"""
+    try:
+        # Try to get a pet - doesn't matter if it exists, just testing the connection
+        pet = await PetDB.get_pets_by_user("test")
+        return {
+            "status": "ok", 
+            "message": "MongoDB connection successful",
+            "connection_info": {
+                "database": os.getenv("MONGODB_DB_NAME"),
+                "uri": "...@" + (os.getenv("MONGODB_URI") or "").split("@")[-1] if "@" in (os.getenv("MONGODB_URI") or "") else "Not configured"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"MongoDB connection failed: {str(e)}") 

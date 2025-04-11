@@ -1,5 +1,8 @@
 # 🌟 ChronoPal: Your Retro 2yk Buddy! 🌟
 
+![Screenshot 2025-04-11 at 4 39 12 AM](https://github.com/user-attachments/assets/c1748218-bc71-4ff0-936d-aed5749f7839)
+
+
 ## 💫 What's This Madness?! 💫
 ChronoPal isn't just an app - it's a VIBE! ✨ Imagine if the 90s had a baby with AI technology and dressed it in neon! That's us! A digital companion that's part nostalgia explosion, part cutting-edge tech wizardry!
 
@@ -26,6 +29,6 @@ ChronoPal isn't just an app - it's a VIBE! ✨ Imagine if the 90s had a baby wit
 - Backend: `pip install -r requirements.txt` then fire it up and watch the terminal go brrrrrr!
 
 ## 🎓 Proudly Crafted by CSU Wizards 🎓
-This totally radical project was brought to life by the keyboard-smashing geniuses at Columbus State Univeristy
+This totally radical project was brought to life by the keyboard-smashing geniuses at Columbus State Univeristy!!!
 
 *Warning: May cause unexpected nostalgia and spontaneous gaming addiction. Side effects include smiling, time loss, and telling your friends "just one more level!"*
