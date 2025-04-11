@@ -3,6 +3,7 @@ import { Pet } from '../types/pet';
 import { User } from '../types/user';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'https://chronopal-backend-00ae6a240df5.herokuapp.com';
+console.log('API_BASE_URL:', API_BASE_URL);
 
 interface InteractionRequest {
   pet_id: string;
@@ -94,12 +95,25 @@ class ApiService {
   }
 
   public async register(email: string, password: string, username: string): Promise<User> {
-    const response = await axios.post<User>(`${API_BASE_URL}/api/register`, {
-      email,
-      password,
-      username
-    });
-    return response.data;
+    console.log(`[apiService] Registering with URL: ${API_BASE_URL}/api/register`);
+    console.log(`[apiService] Registration data:`, { email, username, password: '******' });
+    
+    try {
+      const response = await axios.post<User>(`${API_BASE_URL}/api/register`, {
+        email,
+        password,
+        username
+      });
+      console.log('[apiService] Registration successful:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('[apiService] Registration failed:', error);
+      if (error.response) {
+        console.error('[apiService] Response status:', error.response.status);
+        console.error('[apiService] Response data:', error.response.data);
+      }
+      throw error;
+    }
   }
 
   public async login(email: string, password: string): Promise<LoginResponse> {
