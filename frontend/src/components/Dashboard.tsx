@@ -531,15 +531,7 @@ const Dashboard: React.FC = () => {
         <p className="retro-title">Your l33t Digital BFF from Y2K!</p>
         {/* Debug Controls */}
         <div style={{ marginTop: '10px' }}>
-          <button 
-            onClick={() => {
-              apiService.forceSessionRefresh();
-            }}
-            className="retro-button retro-button-small"
-            style={{ fontSize: '10px', padding: '2px 5px' }}
-          >
-            Debug: Refresh Session
-          </button>
+  
         </div>
       </div>
 

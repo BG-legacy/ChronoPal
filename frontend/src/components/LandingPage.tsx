@@ -2,11 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/RetroStyles.css';
 import catLogo from '../assets/cat.png';
+import csuLogo from '../assets/464-CSU-cougars.webp';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const [totalVisitors] = React.useState(Math.floor(Math.random() * 100000) + 10000);
+  const [petMood, setPetMood] = useState('happy');
   const [showWelcome, setShowWelcome] = useState(false);
+
+  // Cycle through pet moods to show virtual pet behavior
+  useEffect(() => {
+    const moods = ['happy', 'eating', 'playing', 'sleeping'];
+    let moodIndex = 0;
+    
+    const moodInterval = setInterval(() => {
+      moodIndex = (moodIndex + 1) % moods.length;
+      setPetMood(moods[moodIndex]);
+    }, 3000);
+    
+    return () => clearInterval(moodInterval);
+  }, []);
 
   useEffect(() => {
     // Show welcome popup after a delay for that authentic 2000s experience
@@ -79,6 +93,48 @@ const LandingPage: React.FC = () => {
     };
   }, []);
 
+  // Helper function to render pet with different animations based on mood
+  const renderPetAnimation = () => {
+    return (
+      <div className={`tamagotchi-pet ${petMood}`}>
+        <div className="tamagotchi-screen-minimal">
+          <div className="tamagotchi-body">
+            <div className="tamagotchi-head">
+              <div className="tamagotchi-eye left"></div>
+              <div className="tamagotchi-eye right"></div>
+              <div className="tamagotchi-mouth"></div>
+            </div>
+            <div className="tamagotchi-limb tamagotchi-arm left"></div>
+            <div className="tamagotchi-limb tamagotchi-arm right"></div>
+            <div className="tamagotchi-limb tamagotchi-leg left"></div>
+            <div className="tamagotchi-limb tamagotchi-leg right"></div>
+          </div>
+          
+          {petMood === 'eating' && (
+            <div className="food-particles"></div>
+          )}
+          
+          {petMood === 'playing' && (
+            <>
+              <div className="play-toy"></div>
+              <div className="play-stars"></div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+  
+  const getMoodMessage = () => {
+    switch(petMood) {
+      case 'happy': return "I'm happy!";
+      case 'eating': return "Yum yum!";
+      case 'playing': return "This is fun!";
+      case 'sleeping': return "Zzz...";
+      default: return "";
+    }
+  };
+
   return (
     <div className="retro-container">
       {/* Browser Notice */}
@@ -100,7 +156,7 @@ const LandingPage: React.FC = () => {
       {/* Custom Marquee using CSS animation instead of the deprecated marquee tag */}
       <div className="retro-marquee">
         <div className="marquee-content">
-          <span>★★★ Welcome to ChronoPal - Your Virtual Pet from the Future! ★★★ Join our Web Ring! ★★★ New Pet Evolution System Released! ★★★</span>
+          <span>★★★ Welcome to ChronoPal - Your Virtual Pet from the Future! ★★★ Feed! Play! Teach! ★★★ Watch your pet evolve! ★★★</span>
         </div>
       </div>
 
@@ -111,70 +167,40 @@ const LandingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation Panel with more Y2K style buttons */}
-      <div className="retro-panel">
-        <div className="retro-table">
-          <div className="retro-table-row">
-            <button className="retro-nav-button retro-glow">HOME</button>
-            <button className="retro-nav-button">FORUMS</button>
-            <button className="retro-nav-button">GALLERY</button>
-            <button className="retro-nav-button">RANKINGS</button>
-            <button className="retro-nav-button">GUESTBOOK</button>
-            <button className="retro-nav-button retro-blink">NEW!!</button>
-          </div>
-        </div>
-      </div>
-
       {/* Main Content Area */}
       <div className="retro-table">
         <div className="retro-table-row">
-          {/* Left Sidebar - now with banners instead of quick links */}
+          {/* Left Sidebar - simplified with pixelated peach */}
           <div className="retro-table-cell" style={{ width: '20%' }}>
-            {/* Hit Counter */}
-            <div className="hit-counter">
-              Visitors: {totalVisitors.toString().padStart(8, '0')}
+            {/* CSU Cougars Logo */}
+            <div className="csu-logo-container">
+              <img src={csuLogo} alt="CSU Cougars" className="csu-logo" />
             </div>
             
-            {/* Y2K Era Banners */}
-            <div className="retro-banner-collection">
-              <div className="retro-banner">
-                <span className="retro-blink">NEW!</span>
-                <img src="hamster-dance.gif" alt="Dancing Hamster" width="88" height="31" />
+            {/* Pixelated Peach */}
+            <div className="pixel-art-container">
+              <div className="pixel-art pixel-peach">
+                <div className="leaf"></div>
+                <div className="stem"></div>
               </div>
-              <div className="retro-banner">
-                <img src="midi-enabled.gif" alt="MIDI Enabled" width="88" height="31" />
-              </div>
-              <div className="retro-banner">
-                <img src="get-flash.gif" alt="Get Flash Player" width="88" height="31" />
-              </div>
-            </div>
-            
-            {/* Award Banner */}
-            <div className="award-banner">
-              <img src="award-best-site.gif" alt="Best Site Award 2000" width="100" height="100" />
+              <div className="pixel-art-caption">Peachy!</div>
             </div>
           </div>
 
-          {/* Main Content - enhanced center content */}
+          {/* Main Content - enhanced center content with visual demo */}
           <div className="retro-table-cell" style={{ width: '60%' }}>
-            <div className="retro-panel">
-              <div className="text-center mb-6">
-                <img 
-                  src={catLogo} 
-                  alt="ChronoPal" 
-                  className="mx-auto mb-4 animate-pet-float" 
-                  style={{ 
-                    imageRendering: 'pixelated',
-                    width: '150px',
-                    height: '150px'
-                  }} 
-                />
-                <div className="sparkle-text">⋆✧⋆ ⋆✧⋆ ⋆✧⋆ ⋆✧⋆ ⋆✧⋆</div>
+            <div className="retro-panel black-bg">
+              <div className="text-center mb-6 mobile-priority-content">
+                {/* Proper order for mobile: title, subtitle, description, pet, button */}
+                <div className="sparkle-text">⋆✧⋆ Your Pet Awaits! ⋆✧⋆</div>
                 <h2 className="retro-title text-2xl mb-4">ChronoPal - Tamagotchi AI</h2>
-                <p className="mb-4 text-xl" style={{ color: '#0ff' }}>PLAY. EVOLVE. CONNECT!</p>
-                <div className="text-sm mb-3" style={{ color: '#ff0' }}>
-                  Your Y2K-Ready Virtual Pet Experience
+                <p className="mb-4 text-xl" style={{ color: '#0ff' }}>FEED. PLAY. EVOLVE!</p>
+                
+                {/* Interactive Pet Demo */}
+                <div className="pet-only">
+                  {renderPetAnimation()}
                 </div>
+                
                 <button 
                   onClick={() => navigate('/login')}
                   className="retro-button retro-glow"
@@ -183,64 +209,65 @@ const LandingPage: React.FC = () => {
                 </button>
               </div>
               
-              {/* News Updates - more vintage styling */}
-              <div className="mt-6">
-                <h3 className="retro-title text-xl mb-2">Latest Updates</h3>
-                <div className="space-y-2 updates-container">
-                  <div className="retro-card">
-                    <div className="new-label">NEW!</div>
-                    <p>🌟 Pet Evolution System Released!</p>
-                    <span className="text-sm" style={{ color: '#00ffff' }}>Posted: 4/20/2000</span>
+              {/* Feature Grid - Visual showcase */}
+              <div className="feature-grid mt-6">
+                <div className="feature-box">
+                  <div className="feature-box-title">Raise Your Pet</div>
+                  <div className="feature-box-content">
+                    <div className="feature-animation raising"></div>
+                    <p>Feed, clean & nurture your digital companion!</p>
                   </div>
-                  <div className="retro-card">
-                    <p>🎮 Mini-games Tournament This Weekend!</p>
-                    <span className="text-sm" style={{ color: '#00ffff' }}>Posted: 4/19/2000</span>
+                </div>
+                
+                <div className="feature-box">
+                  <div className="feature-box-title">Play Games</div>
+                  <div className="feature-box-content">
+                    <div className="feature-animation gaming"></div>
+                    <p>Unlock mini-games & earn coins!</p>
                   </div>
-                  <div className="retro-card">
-                    <p>💿 Download our screensaver! (3.2MB)</p>
-                    <span className="text-sm" style={{ color: '#00ffff' }}>Posted: 4/15/2000</span>
+                </div>
+                
+                <div className="feature-box">
+                  <div className="feature-box-title">Evolve</div>
+                  <div className="feature-box-content">
+                    <div className="feature-animation evolving"></div>
+                    <p>Watch your pet transform as it grows!</p>
+                  </div>
+                </div>
+                
+                <div className="feature-box">
+                  <div className="feature-box-title">Connect</div>
+                  <div className="feature-box-content">
+                    <div className="feature-animation connecting"></div>
+                    <p>Meet other pet owners in our community!</p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Sidebar - replaced Top Players with more 2000s elements */}
+          {/* Right Sidebar - replaced with pixelated images */}
           <div className="retro-table-cell" style={{ width: '20%' }}>
-            {/* Web Badges - expanded with more Y2K web badges */}
-            <div className="retro-badges">
-              <div className="retro-badge">
-                <img src="netscape-now.gif" alt="Netscape Now!" width="88" height="31" />
-              </div>
-              <div className="retro-badge">
-                <img src="ie_anim.gif" alt="Internet Explorer" width="88" height="31" />
-              </div>
-              <div className="retro-badge">
-                <img src="geocities.gif" alt="Made with GeoCities" width="88" height="31" />
-              </div>
-              <div className="retro-badge">
-                <img src="under-construction.gif" alt="Under Construction" width="88" height="31" />
-              </div>
-              <div className="retro-badge">
-                <img src="y2k-ready.gif" alt="Y2K Ready" width="88" height="31" />
-              </div>
-            </div>
+            {/* Pixelated Images Related to Project */}
+            <div className="pixelated-images-container">
+              {/* Pixelated Tamagotchi Device */}
+              <div className="pixel-art-container">
+                <div className="pixel-art tamagotchi-device">
+                  <div className="button-a"></div>
+                  <div className="button-b"></div>
+                  <div className="button-c"></div>
+                </div>
 
-            {/* Web Ring - enhanced */}
-            <div className="web-ring">
-              <div className="web-ring-title">Virtual Pet Web Ring</div>
-              <div>
-                <a href="#" className="retro-link">[Previous]</a>
-                <a href="#" className="retro-link">[Next]</a>
-                <a href="#" className="retro-link">[Random]</a>
-                <a href="#" className="retro-link">[List]</a>
               </div>
-            </div>
-            
-            {/* Sign Guestbook Call to Action */}
-            <div className="guestbook-cta">
-              <div className="guestbook-title">Sign Our Guestbook!</div>
-              <img src="guestbook.gif" alt="Sign Guestbook" width="100" height="50" />
+              
+              {/* Pixelated Y2K Computer */}
+              <div className="pixel-art-container">
+                <div className="pixel-art y2k-computer">
+                  <div className="base"></div>
+                  <div className="keyboard"></div>
+                </div>
+               
+              </div>
             </div>
           </div>
         </div>
