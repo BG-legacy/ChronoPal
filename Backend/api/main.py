@@ -27,7 +27,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=["https://chrono-pal.vercel.app", "http://localhost:3000"],  # Production and local development URLs
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
