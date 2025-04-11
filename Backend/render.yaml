@@ -3,7 +3,7 @@ services:
     name: chronopal-backend
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: chmod +x start.sh && ./start.sh
+    startCommand: gunicorn wsgi:application --workers 4 --worker-class uvicorn.workers.UvicornWorker
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.11 

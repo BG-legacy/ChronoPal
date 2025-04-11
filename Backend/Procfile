@@ -1,1 +1,1 @@
-web: python -m gunicorn app:app --workers 4 --worker-class uvicorn.workers.UvicornWorker 
+web: gunicorn wsgi:application --workers 4 --worker-class uvicorn.workers.UvicornWorker 
