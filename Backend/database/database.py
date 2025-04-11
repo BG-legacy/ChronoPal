@@ -10,62 +10,55 @@ from passlib.context import CryptContext
 from bson import ObjectId
 from pymongo.server_api import ServerApi
 import certifi
+import ssl
 
 # Load environment variables
 load_dotenv()
 
 # MongoDB connection string and database name
-MONGODB_URI = os.getenv("MONGODB_URI")
-DB_NAME = os.getenv("MONGODB_DB_NAME")
+MONGODB_URI = os.getenv("MONGODB_URI") or os.getenv("DATABASE_URL")
+DB_NAME = os.getenv("MONGODB_DB_NAME") or "chronopal"
 
+print(f"Using MongoDB URI: {MONGODB_URI[:3]}...{MONGODB_URI[-30:]}")
 print(f"Connecting to MongoDB database: {DB_NAME}")
-# Don't print full URI as it contains credentials
-uri_parts = MONGODB_URI.split('@') if MONGODB_URI else []
-if len(uri_parts) > 1:
-    safe_uri = f"...@{uri_parts[-1]}"
-    print(f"Using MongoDB URI: {safe_uri}")
 
-if not MONGODB_URI or not DB_NAME:
-    raise ValueError("MongoDB connection settings are not properly configured in environment variables")
+if not MONGODB_URI:
+    raise ValueError("MongoDB URI not found in environment variables")
 
-# Function to get the MongoDB client - will be overridden by the function from routes
-async def get_client():
-    try:
-        client = AsyncIOMotorClient(
-            MONGODB_URI,
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=10000,
-            maxPoolSize=10,
-            minPoolSize=0,
-            maxIdleTimeMS=50000,
-            tlsCAFile=certifi.where()
-        )
-        return client
-    except Exception as e:
-        print(f"Error connecting to MongoDB: {str(e)}")
-        raise
+# Global MongoDB client
+_mongo_client = None
 
-# Backward compatibility for test files
-# These are needed for test files that still import these variables
-async def get_async_client():
-    try:
-        client = AsyncIOMotorClient(
-            MONGODB_URI,
-            serverSelectionTimeoutMS=5000,
-            connectTimeoutMS=10000,
-            maxPoolSize=10,
-            minPoolSize=0,
-            maxIdleTimeMS=50000,
-            tlsCAFile=certifi.where()
-        )
-        return client
-    except Exception as e:
-        print(f"Error connecting to MongoDB: {str(e)}")
-        raise
+def set_mongo_client(client: AsyncIOMotorClient):
+    """Set the global MongoDB client"""
+    global _mongo_client
+    _mongo_client = client
+    print("MongoDB client set successfully")
 
-# Create objects for backward compatibility with tests
-async_client = get_async_client()
-async_db = async_client[DB_NAME]
+async def get_client() -> AsyncIOMotorClient:
+    """Get the MongoDB client, creating it if necessary"""
+    global _mongo_client
+    if _mongo_client is None:
+        try:
+            _mongo_client = AsyncIOMotorClient(
+                MONGODB_URI,
+                tlsCAFile=certifi.where()
+            )
+            print("Created new MongoDB client")
+        except Exception as e:
+            print(f"Error creating MongoDB client: {str(e)}")
+            raise
+    return _mongo_client
+
+# Create a synchronous client for testing and compatibility
+client = AsyncIOMotorClient(
+    MONGODB_URI,
+    connectTimeoutMS=30000, 
+    serverSelectionTimeoutMS=30000,
+    socketTimeoutMS=None,
+    connect=True
+)
+async_client = client  # Use the synchronous client directly
+async_db = client[DB_NAME]
 async_pets_collection = async_db["pets"]
 async_users_collection = async_db["users"]
 
@@ -77,7 +70,7 @@ class UserDB:
     async def create_user(user: UserCreate) -> User:
         # Import here to avoid circular import
         from api.routes import get_mongo_client_func
-        client = get_mongo_client_func()
+        client = get_mongo_client_func()  # This now returns a client directly
         db = client[DB_NAME]
         users_collection = db["users"]
         
@@ -109,28 +102,34 @@ class UserDB:
 
     @staticmethod
     async def get_user_by_id(user_id: str) -> Optional[User]:
+        # Import here to avoid circular import
+        from api.routes import get_mongo_client_func
+        client = get_mongo_client_func()
+        db = client[DB_NAME]
+        users_collection = db["users"]
+        
         try:
-            # Import here to avoid circular import
-            from api.routes import get_mongo_client_func
-            client = get_mongo_client_func()
-            db = client[DB_NAME]
-            users_collection = db["users"]
-            
-            user = await users_collection.find_one({"_id": ObjectId(user_id)})
+            # Try to handle the user_id as ObjectId or string
+            if ObjectId.is_valid(user_id):
+                user = await users_collection.find_one({"_id": ObjectId(user_id)})
+            else:
+                user = await users_collection.find_one({"$or": [{"_id": user_id}, {"id": user_id}]})
+                
             if user:
                 user["_id"] = str(user["_id"])
-            return User(**user) if user else None
+                return User(**user)
+            return None
         except Exception as e:
             print(f"Error getting user by ID: {str(e)}")
             return None
 
     @staticmethod
-    def verify_password(plain_password: str, hashed_password: str) -> bool:
-        return pwd_context.verify(plain_password, hashed_password)
-
-    @staticmethod
     def get_password_hash(password: str) -> str:
         return pwd_context.hash(password)
+        
+    @staticmethod
+    def verify_password(plain_password: str, hashed_password: str) -> bool:
+        return pwd_context.verify(plain_password, hashed_password)
 
     @staticmethod
     async def delete_user(user_id: str) -> bool:
@@ -200,65 +199,20 @@ class PetDB:
             db = client[DB_NAME]
             pets_collection = db["pets"]
             
-            pet = await pets_collection.find_one({"_id": ObjectId(pet_id)})
-            if not pet:
-                return None
-                
-            # Convert datetime strings to datetime objects if needed
-            for date_field in ["created_at", "last_fed", "last_interaction", "last_interaction_reset"]:
-                if date_field in pet and isinstance(pet[date_field], str):
-                    try:
-                        pet[date_field] = datetime.fromisoformat(pet[date_field].replace("Z", "+00:00"))
-                    except ValueError:
-                        # If we can't parse it, leave it as is
-                        pass
+            # Try to handle the pet_id as ObjectId or string
+            pet = None
+            if ObjectId.is_valid(pet_id):
+                pet = await pets_collection.find_one({"_id": ObjectId(pet_id)})
+            else:
+                pet = await pets_collection.find_one({"$or": [{"_id": pet_id}, {"id": pet_id}]})
             
-            # Convert BSON ObjectId to string
-            pet["_id"] = str(pet["_id"])
-            
-            # Check for neglect state
-            pet_obj = Pet(**pet)
-            
-            # Calculate time since last interaction
-            now = datetime.now(timezone.utc)
-            last_interaction = pet.get("last_interaction", now - timedelta(days=1))
-            if isinstance(last_interaction, str):
-                try:
-                    last_interaction = datetime.fromisoformat(last_interaction.replace("Z", "+00:00"))
-                except ValueError:
-                    last_interaction = now - timedelta(days=1)
-            
-            hours_since_interaction = (now - last_interaction).total_seconds() / 3600
-            
-            # Update mood based on neglect if needed
-            if hours_since_interaction >= NEGLECT_THRESHOLD_HOURS:
-                level = int(hours_since_interaction / NEGLECT_THRESHOLD_HOURS)
-                idx = min(level, len(MOOD_LEVELS) - 1)  # Ensure we don't go out of bounds
-                pet_obj.mood = MOOD_LEVELS[idx]
-                
-                # Save the updated mood
-                await PetDB.update_pet(pet_id, {"mood": pet_obj.mood})
-            
-            # Check if we need to reset daily interaction counter
-            last_reset = pet.get("last_interaction_reset", now - timedelta(days=1))
-            if isinstance(last_reset, str):
-                try:
-                    last_reset = datetime.fromisoformat(last_reset.replace("Z", "+00:00"))
-                except ValueError:
-                    last_reset = now - timedelta(days=1)
-            
-            if last_reset.date() < now.date():
-                # It's a new day, reset the counter
-                pet_obj.interactions_today = 0
-                pet_obj.last_interaction_reset = now
-                await PetDB.update_pet(pet_id, {
-                    "interactions_today": 0,
-                    "last_interaction_reset": now
-                })
-            
-            return pet_obj
+            if pet:
+                # Convert ObjectId to string
+                pet["_id"] = str(pet["_id"])
+                return Pet(**pet)
+            return None
         except Exception as e:
-            print(f"Error getting pet: {str(e)}")
+            print(f"[DEBUG] Error getting pet {pet_id}: {str(e)}")
             return None
 
     @staticmethod

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from api.routes import router, set_mongo_client
+from api.routes import router, set_mongo_client, set_session_functions
 import os
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -49,14 +49,6 @@ async def delete_session(session_id: str):
     db = client[os.getenv("MONGODB_DB_NAME", "chronopal")]
     await db.sessions.delete_one({"session_id": session_id})
 
-# Share the session management functions with the routes module
-from api.routes import set_session_functions
-set_session_functions({
-    "get_session": get_session,
-    "create_session": create_session,
-    "delete_session": delete_session
-})
-
 app = FastAPI(
     title="ChronoPal API",
     description="API for ChronoPal virtual pet application",
@@ -84,10 +76,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize MongoDB on startup
+# Initialize MongoDB and session management on startup
 @app.on_event("startup")
 async def startup_event():
-    await initialize_mongodb()
+    try:
+        client = await initialize_mongodb()
+        # Set up session management functions after MongoDB is initialized
+        session_funcs = {
+            "get_session": get_session,
+            "create_session": create_session,
+            "delete_session": delete_session
+        }
+        set_session_functions(session_funcs)
+        print("Session management functions initialized successfully")
+    except Exception as e:
+        print(f"Error during startup: {str(e)}")
+        raise
 
 # Include the router
-app.include_router(router, prefix="/api") 
+app.include_router(router, prefix="/api")
