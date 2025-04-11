@@ -10,7 +10,7 @@ A retro-styled productivity app built with React and Tailwind CSS.
 
 ## Getting Started
 
-1. Install dependencies:
+1. Install dependencies in the frontend folder:
    ```
    npm install
    ```
