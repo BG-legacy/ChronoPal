@@ -29,6 +29,6 @@ ChronoPal isn't just an app - it's a VIBE! ✨ Imagine if the 90s had a baby wit
 - Backend: `pip install -r requirements.txt` then fire it up and watch the terminal go brrrrrr!
 
 ## 🎓 Proudly Crafted by CSU Wizards 🎓
-This totally radical project was brought to life by the keyboard-smashing geniuses at Columbus State Univeristy
+This totally radical project was brought to life by the keyboard-smashing geniuses at Columbus State Univeristy!!!
 
 *Warning: May cause unexpected nostalgia and spontaneous gaming addiction. Side effects include smiling, time loss, and telling your friends "just one more level!"*
