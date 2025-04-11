@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Header, Request
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Callable
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import os
@@ -9,6 +9,7 @@ from database.user_schema import User, UserCreate, UserLogin
 from database.database import PetDB, UserDB
 from .ai_personality import get_chronopal_response
 from bson import ObjectId
+import certifi
 
 # Load environment variables
 load_dotenv()
@@ -17,6 +18,7 @@ router = APIRouter()
 
 # Store active sessions (in production, use a proper session store)
 active_sessions = {}
+get_mongo_client_func = None
 
 # Function to set the active_sessions from main.py
 def set_active_sessions(sessions_dict):
@@ -24,6 +26,13 @@ def set_active_sessions(sessions_dict):
     global active_sessions
     active_sessions = sessions_dict
     print(f"Session store initialized with {len(active_sessions)} existing sessions")
+
+# Function to set the MongoDB client function from main.py
+def set_mongo_client(client_func: Callable):
+    """Set the MongoDB client function from main app"""
+    global get_mongo_client_func
+    get_mongo_client_func = client_func
+    print("MongoDB client function initialized")
 
 # Simple health check endpoint
 @router.get("/health")

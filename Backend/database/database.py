@@ -9,6 +9,7 @@ from .user_schema import User, UserCreate
 from passlib.context import CryptContext
 from bson import ObjectId
 from pymongo.server_api import ServerApi
+import certifi
 
 # Load environment variables
 load_dotenv()
@@ -27,127 +28,22 @@ if len(uri_parts) > 1:
 if not MONGODB_URI or not DB_NAME:
     raise ValueError("MongoDB connection settings are not properly configured in environment variables")
 
-# Initialize MongoDB client with updated SSL settings
-try:
-    import ssl
-    import certifi
-    
-    print("Connecting to MongoDB...")
-    
-    # First, try with minimal parameters and standard TLS configuration
+# Function to get the MongoDB client - will be overridden by the function from routes
+async def get_client():
     try:
-        print("Trying connection with standard TLS configuration...")
-        client = MongoClient(
+        client = AsyncIOMotorClient(
             MONGODB_URI,
-            serverSelectionTimeoutMS=10000,
+            serverSelectionTimeoutMS=5000,
             connectTimeoutMS=10000,
-            socketTimeoutMS=20000,
-            tls=True,
-            tlsCAFile=certifi.where(),
-            server_api=ServerApi('1')
-        )
-        # Test the connection
-        server_info = client.server_info()
-        print(f"Successfully connected to MongoDB version: {server_info.get('version', 'unknown')}")
-    except Exception as e:
-        print(f"Standard TLS connection failed: {str(e)}")
-        print("Trying connection with additional TLS options...")
-        
-        # Try with relaxed TLS settings
-        client = MongoClient(
-            MONGODB_URI,
-            serverSelectionTimeoutMS=10000,
-            connectTimeoutMS=10000,
-            socketTimeoutMS=20000,
-            tls=True,
-            tlsAllowInvalidCertificates=True,
-            server_api=ServerApi('1')
-        )
-        # Test the connection
-        server_info = client.server_info()
-        print(f"Connected with relaxed TLS settings to MongoDB version: {server_info.get('version', 'unknown')}")
-
-    print(f"Available databases: {client.list_database_names()}")
-        
-    db = client[DB_NAME]
-    pets_collection = db["pets"]
-    users_collection = db["users"]
-    
-    # Print existing collections
-    print(f"Collections in {DB_NAME}: {db.list_collection_names()}")
-
-    # Async client using the same connection parameters that worked for the sync client
-    print("Setting up async MongoDB client...")
-    try:
-        print("Trying async connection with standard TLS configuration...")
-        async_client = AsyncIOMotorClient(
-            MONGODB_URI,
-            serverSelectionTimeoutMS=10000,
-            connectTimeoutMS=10000,
-            socketTimeoutMS=20000,
-            tls=True,
+            maxPoolSize=10,
+            minPoolSize=0,
+            maxIdleTimeMS=50000,
             tlsCAFile=certifi.where()
         )
+        return client
     except Exception as e:
-        print(f"Standard async TLS connection failed: {str(e)}")
-        print("Trying async connection with additional TLS options...")
-        
-        # Try with relaxed TLS settings for async client
-        async_client = AsyncIOMotorClient(
-            MONGODB_URI,
-            serverSelectionTimeoutMS=10000,
-            connectTimeoutMS=10000,
-            socketTimeoutMS=20000,
-            tls=True,
-            tlsAllowInvalidCertificates=True
-        )
-
-    async_db = async_client[DB_NAME]
-    async_pets_collection = async_db["pets"]
-    async_users_collection = async_db["users"]
-    print("Async MongoDB client setup complete")
-except Exception as e:
-    print(f"Error setting up MongoDB connection: {str(e)}")
-    # Create empty placeholder collections for testing/development
-    # This allows the app to start even if MongoDB is not available
-    class MockCollection:
-        async def find_one(self, *args, **kwargs):
-            print("Warning: Using mock database connection")
-            return None
-        
-        async def find(self, *args, **kwargs):
-            print("Warning: Using mock database connection")
-            class MockCursor:
-                def __aiter__(self):
-                    return self
-                async def __anext__(self):
-                    raise StopAsyncIteration
-                def limit(self, *args, **kwargs):
-                    return self
-            return MockCursor()
-        
-        async def insert_one(self, *args, **kwargs):
-            print("Warning: Using mock database connection")
-            class MockResult:
-                @property
-                def inserted_id(self):
-                    return "mock_id"
-            return MockResult()
-        
-        async def update_one(self, *args, **kwargs):
-            print("Warning: Using mock database connection")
-            return None
-        
-        async def delete_one(self, *args, **kwargs):
-            print("Warning: Using mock database connection")
-            class MockResult:
-                @property
-                def deleted_count(self):
-                    return 0
-            return MockResult()
-    
-    async_pets_collection = MockCollection()
-    async_users_collection = MockCollection()
+        print(f"Error connecting to MongoDB: {str(e)}")
+        raise
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -155,6 +51,12 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 class UserDB:
     @staticmethod
     async def create_user(user: UserCreate) -> User:
+        # Import here to avoid circular import
+        from api.routes import get_mongo_client_func
+        client = get_mongo_client_func()
+        db = client[DB_NAME]
+        users_collection = db["users"]
+        
         hashed_password = UserDB.get_password_hash(user.password)
         user_dict = {
             "username": user.username,
@@ -162,15 +64,21 @@ class UserDB:
             "hashed_password": hashed_password,
             "created_at": datetime.now(timezone.utc)
         }
-        result = await async_users_collection.insert_one(user_dict)
-        created_user = await async_users_collection.find_one({"_id": result.inserted_id})
+        result = await users_collection.insert_one(user_dict)
+        created_user = await users_collection.find_one({"_id": result.inserted_id})
         if created_user:
             created_user["_id"] = str(created_user["_id"])
         return User(**created_user)
 
     @staticmethod
     async def get_user_by_email(email: str) -> Optional[User]:
-        user = await async_users_collection.find_one({"email": email})
+        # Import here to avoid circular import
+        from api.routes import get_mongo_client_func
+        client = get_mongo_client_func()
+        db = client[DB_NAME]
+        users_collection = db["users"]
+        
+        user = await users_collection.find_one({"email": email})
         if user:
             user["_id"] = str(user["_id"])
         return User(**user) if user else None
@@ -178,11 +86,18 @@ class UserDB:
     @staticmethod
     async def get_user_by_id(user_id: str) -> Optional[User]:
         try:
-            user = await async_users_collection.find_one({"_id": ObjectId(user_id)})
+            # Import here to avoid circular import
+            from api.routes import get_mongo_client_func
+            client = get_mongo_client_func()
+            db = client[DB_NAME]
+            users_collection = db["users"]
+            
+            user = await users_collection.find_one({"_id": ObjectId(user_id)})
             if user:
                 user["_id"] = str(user["_id"])
             return User(**user) if user else None
-        except:
+        except Exception as e:
+            print(f"Error getting user by ID: {str(e)}")
             return None
 
     @staticmethod
@@ -196,109 +111,151 @@ class UserDB:
     @staticmethod
     async def delete_user(user_id: str) -> bool:
         try:
-            result = await async_users_collection.delete_one({"_id": ObjectId(user_id)})
+            # Import here to avoid circular import
+            from api.routes import get_mongo_client_func
+            client = get_mongo_client_func()
+            db = client[DB_NAME]
+            users_collection = db["users"]
+            
+            result = await users_collection.delete_one({"_id": ObjectId(user_id)})
             return result.deleted_count > 0
-        except:
+        except Exception as e:
+            print(f"Error deleting user: {str(e)}")
             return False
 
 class PetDB:
     @staticmethod
     async def create_pet(pet_data: Union[Pet, Dict]) -> Pet:
-        """Create a new pet from either a Pet object or a dictionary"""
-        try:
-            if isinstance(pet_data, dict):
-                # If it's a dictionary, create a Pet object
-                pet = Pet(**pet_data)
-                pet_dict = pet.model_dump()
-            else:
-                # If it's already a Pet object, just get the dictionary
-                pet_dict = pet_data.model_dump()
-
-            # Remove _id if it exists to let MongoDB generate it
-            if "_id" in pet_dict:
-                del pet_dict["_id"]
-
-            result = await async_pets_collection.insert_one(pet_dict)
-            created_pet = await async_pets_collection.find_one({"_id": result.inserted_id})
-            if created_pet:
-                created_pet["_id"] = str(created_pet["_id"])
-            return Pet(**created_pet)
-        except Exception as e:
-            print(f"Error creating pet: {str(e)}")
-            raise
+        # Import here to avoid circular import
+        from api.routes import get_mongo_client_func
+        client = get_mongo_client_func()
+        db = client[DB_NAME]
+        pets_collection = db["pets"]
+        
+        # Convert to dict if it's a Pydantic model
+        if isinstance(pet_data, Pet):
+            pet_data = pet_data.model_dump()
+        
+        # Ensure required fields
+        if "created_at" not in pet_data:
+            pet_data["created_at"] = datetime.now(timezone.utc)
+        if "last_fed" not in pet_data:
+            pet_data["last_fed"] = datetime.now(timezone.utc)
+        if "last_interaction" not in pet_data:
+            pet_data["last_interaction"] = datetime.now(timezone.utc)
+        if "memories" not in pet_data:
+            pet_data["memories"] = []
+        if "mood" not in pet_data:
+            pet_data["mood"] = "happy"
+        if "level" not in pet_data:
+            pet_data["level"] = 1
+        if "evolve_stage" not in pet_data:
+            pet_data["evolve_stage"] = "baby"
+        if "battery_level" not in pet_data:
+            pet_data["battery_level"] = 100
+        if "interactions_today" not in pet_data:
+            pet_data["interactions_today"] = 0
+        if "last_interaction_reset" not in pet_data:
+            pet_data["last_interaction_reset"] = datetime.now(timezone.utc)
+        
+        result = await pets_collection.insert_one(pet_data)
+        created_pet = await pets_collection.find_one({"_id": result.inserted_id})
+        
+        # Convert ObjectId to string for return value
+        if created_pet:
+            created_pet["_id"] = str(created_pet["_id"])
+        
+        return Pet(**created_pet)
 
     @staticmethod
     async def get_pet(pet_id: str) -> Optional[Pet]:
         try:
-            print(f"[DEBUG] Looking for pet with ID: {pet_id}")
-            print(f"[DEBUG] Pet ID type: {type(pet_id)}")
-            print(f"[DEBUG] Pet ID value: {pet_id}")
+            # Import here to avoid circular import
+            from api.routes import get_mongo_client_func
+            client = get_mongo_client_func()
+            db = client[DB_NAME]
+            pets_collection = db["pets"]
             
-            # Dump the first few pets in the collection for debugging
-            print(f"[DEBUG] Dumping first 3 pets in collection:")
-            cursor = async_pets_collection.find().limit(3)
-            idx = 0
-            async for pet in cursor:
-                idx += 1
-                if pet:
-                    pet_id_str = str(pet.get("_id", "None"))
-                    print(f"[DEBUG] Pet {idx}: _id={pet_id_str}, name={pet.get('name', 'None')}, userId={pet.get('userId', 'None')}")
-            
-            # First, try with the _id field and ObjectId
-            try:
-                print(f"[DEBUG] Attempting to lookup with ObjectId...")
-                obj_id = ObjectId(pet_id)
-                print(f"[DEBUG] Created ObjectId: {obj_id}")
-                pet = await async_pets_collection.find_one({"_id": obj_id})
-                if pet:
-                    print(f"[DEBUG] Found pet with _id as ObjectId: {pet_id}")
-                    pet["_id"] = str(pet["_id"])
-                    return Pet(**pet) if pet else None
-                else:
-                    print(f"[DEBUG] No pet found with ObjectId: {obj_id}")
-            except Exception as e:
-                print(f"[DEBUG] Error looking up by ObjectId: {str(e)}")
-            
-            # Next, try with string _id
-            print(f"[DEBUG] Attempting to lookup with string _id...")
-            pet = await async_pets_collection.find_one({"_id": pet_id})
-            if pet:
-                print(f"[DEBUG] Found pet with _id as string: {pet_id}")
-                pet["_id"] = str(pet["_id"])
-                return Pet(**pet) if pet else None
-            else:
-                print(f"[DEBUG] No pet found with string _id: {pet_id}")
-            
-            # Next, try with the id field (frontend might be passing this)
-            print(f"[DEBUG] Attempting to lookup with id field...")
-            pet = await async_pets_collection.find_one({"id": pet_id})
-            if pet:
-                print(f"[DEBUG] Found pet with id field: {pet_id}")
-                pet["_id"] = str(pet["_id"])
-                return Pet(**pet) if pet else None
-            else:
-                print(f"[DEBUG] No pet found with id field: {pet_id}")
+            pet = await pets_collection.find_one({"_id": ObjectId(pet_id)})
+            if not pet:
+                return None
                 
-            print(f"[DEBUG] No pet found with any ID format for {pet_id}")
-            return None
+            # Convert datetime strings to datetime objects if needed
+            for date_field in ["created_at", "last_fed", "last_interaction", "last_interaction_reset"]:
+                if date_field in pet and isinstance(pet[date_field], str):
+                    try:
+                        pet[date_field] = datetime.fromisoformat(pet[date_field].replace("Z", "+00:00"))
+                    except ValueError:
+                        # If we can't parse it, leave it as is
+                        pass
+            
+            # Convert BSON ObjectId to string
+            pet["_id"] = str(pet["_id"])
+            
+            # Check for neglect state
+            pet_obj = Pet(**pet)
+            
+            # Calculate time since last interaction
+            now = datetime.now(timezone.utc)
+            last_interaction = pet.get("last_interaction", now - timedelta(days=1))
+            if isinstance(last_interaction, str):
+                try:
+                    last_interaction = datetime.fromisoformat(last_interaction.replace("Z", "+00:00"))
+                except ValueError:
+                    last_interaction = now - timedelta(days=1)
+            
+            hours_since_interaction = (now - last_interaction).total_seconds() / 3600
+            
+            # Update mood based on neglect if needed
+            if hours_since_interaction >= NEGLECT_THRESHOLD_HOURS:
+                level = int(hours_since_interaction / NEGLECT_THRESHOLD_HOURS)
+                idx = min(level, len(MOOD_LEVELS) - 1)  # Ensure we don't go out of bounds
+                pet_obj.mood = MOOD_LEVELS[idx]
+                
+                # Save the updated mood
+                await PetDB.update_pet(pet_id, {"mood": pet_obj.mood})
+            
+            # Check if we need to reset daily interaction counter
+            last_reset = pet.get("last_interaction_reset", now - timedelta(days=1))
+            if isinstance(last_reset, str):
+                try:
+                    last_reset = datetime.fromisoformat(last_reset.replace("Z", "+00:00"))
+                except ValueError:
+                    last_reset = now - timedelta(days=1)
+            
+            if last_reset.date() < now.date():
+                # It's a new day, reset the counter
+                pet_obj.interactions_today = 0
+                pet_obj.last_interaction_reset = now
+                await PetDB.update_pet(pet_id, {
+                    "interactions_today": 0,
+                    "last_interaction_reset": now
+                })
+            
+            return pet_obj
         except Exception as e:
-            print(f"[DEBUG] Unexpected error in get_pet: {str(e)}")
+            print(f"Error getting pet: {str(e)}")
             return None
 
     @staticmethod
     async def get_pets_by_user(user_id: str) -> List[Pet]:
-        """Get all pets for a user"""
         try:
-            cursor = async_pets_collection.find({"userId": user_id})
+            # Import here to avoid circular import
+            from api.routes import get_mongo_client_func
+            client = get_mongo_client_func()
+            db = client[DB_NAME]
+            pets_collection = db["pets"]
+            
+            cursor = pets_collection.find({"user_id": user_id})
             pets = []
-            async for pet in cursor:
-                if pet:
-                    pet["_id"] = str(pet["_id"])
-                    pets.append(Pet(**pet))
+            async for doc in cursor:
+                # Convert ObjectId to string for each pet
+                doc["_id"] = str(doc["_id"])
+                pets.append(Pet(**doc))
             return pets
         except Exception as e:
-            print(f"Error getting pets for user {user_id}: {str(e)}")
-            raise
+            print(f"Error getting pets by user: {str(e)}")
+            return []
 
     @staticmethod
     async def update_pet(pet_id: str, pet_data: dict) -> Optional[Pet]:
