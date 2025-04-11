@@ -201,12 +201,15 @@ const LandingPage: React.FC = () => {
                   {renderPetAnimation()}
                 </div>
                 
-                <button 
-                  onClick={() => navigate('/login')}
-                  className="retro-button retro-glow"
-                >
-                  Start Your Journey
-                </button>
+                <div className="button-container">
+                  <button 
+                    onClick={() => navigate('/login')}
+                    className="retro-button retro-glow"
+                    style={{ width: '100%', padding: '15px 30px' }}
+                  >
+                    Start Your Journey
+                  </button>
+                </div>
               </div>
               
               {/* Feature Grid - Visual showcase */}

@@ -33,9 +33,6 @@ const Login: React.FC = () => {
     <div className="retro-container">
       <div className="retro-panel" style={{ maxWidth: '400px', margin: '0 auto' }}>
         <h2 className="retro-title">Welcome to ChronoPal</h2>
-        <div className="retro-browser-notice">
-          Best viewed in Netscape Navigator 4.0 or higher
-        </div>
         
         <form onSubmit={handleSubmit} className="retro-form">
           <div className="retro-table">
