@@ -28,27 +28,26 @@ if not MONGODB_URI or not DB_NAME:
 
 # Initialize MongoDB client with updated SSL settings
 try:
-    # For older pymongo versions, ssl_cert_reqs can cause issues
-    # Use a clean URI without any explicit SSL params and let pymongo handle it
-    if "ssl_cert_reqs" in MONGODB_URI:
-        # Remove the problematic parameter
-        import re
-        MONGODB_URI = re.sub(r'[&?]ssl_cert_reqs=[^&]*', '', MONGODB_URI)
-        print(f"Removed ssl_cert_reqs from MongoDB URI")
+    import ssl
+    import certifi
     
-    # Also remove other potentially problematic SSL parameters
-    for param in ['tlsAllowInvalidCertificates', 'tlsAllowInvalidHostnames']:
-        if param in MONGODB_URI:
-            MONGODB_URI = re.sub(r'[&?]' + param + r'=[^&]*', '', MONGODB_URI)
-            print(f"Removed {param} from MongoDB URI")
+    # Create custom SSL context
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
     
-    print("Connecting to MongoDB...")
+    print("Connecting to MongoDB with custom SSL context...")
     
-    # Connect with minimal options
-    client = MongoClient(MONGODB_URI, 
-                        serverSelectionTimeoutMS=5000,  # 5 second timeout
-                        connectTimeoutMS=5000,
-                        socketTimeoutMS=10000)
+    # Connect with SSL context
+    client = MongoClient(
+        MONGODB_URI,
+        serverSelectionTimeoutMS=10000,  # Increased timeout
+        connectTimeoutMS=10000,
+        socketTimeoutMS=20000,
+        tlsAllowInvalidCertificates=True,
+        ssl_cert_reqs=ssl.CERT_NONE,
+        ssl=True
+    )
 
     # Test the connection - only log errors, don't fail
     try:
@@ -69,10 +68,15 @@ try:
 
     # Async client for FastAPI with minimal parameters
     print("Setting up async MongoDB client...")
-    async_client = AsyncIOMotorClient(MONGODB_URI, 
-                                    serverSelectionTimeoutMS=5000,  # 5 second timeout
-                                    connectTimeoutMS=5000,
-                                    socketTimeoutMS=10000)
+    async_client = AsyncIOMotorClient(
+        MONGODB_URI,
+        serverSelectionTimeoutMS=10000,
+        connectTimeoutMS=10000,
+        socketTimeoutMS=20000,
+        tlsAllowInvalidCertificates=True,
+        ssl_cert_reqs=ssl.CERT_NONE,
+        ssl=True
+    )
 
     async_db = async_client[DB_NAME]
     async_pets_collection = async_db["pets"]
