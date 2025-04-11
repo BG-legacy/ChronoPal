@@ -3,6 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import '../styles/RetroStyles.css';
 import catLogo from '../assets/cat.png';
 import csuLogo from '../assets/464-CSU-cougars.webp';
+import About from './About';
+import Contact from './Contact';
+import Rules from './Rules';
+import Privacy from './Privacy';
+
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -280,7 +285,7 @@ const LandingPage: React.FC = () => {
           <Link to="/contact" className="retro-link">Contact</Link> |
           <Link to="/rules" className="retro-link">Rules</Link> |
           <Link to="/privacy" className="retro-link">Privacy</Link> |
-          <a href="#" className="retro-link">Sign Guestbook</a>
+          
         </div>
         <div>© 2000 ChronoPal - All Your Pets Are Belong To Us</div>
         <div className="page-stats">
