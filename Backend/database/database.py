@@ -16,45 +16,68 @@ load_dotenv()
 MONGODB_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("MONGODB_DB_NAME")
 
+print(f"Connecting to MongoDB database: {DB_NAME}")
+# Don't print full URI as it contains credentials
+uri_parts = MONGODB_URI.split('@') if MONGODB_URI else []
+if len(uri_parts) > 1:
+    safe_uri = f"...@{uri_parts[-1]}"
+    print(f"Using MongoDB URI: {safe_uri}")
+
 if not MONGODB_URI or not DB_NAME:
     raise ValueError("MongoDB connection settings are not properly configured in environment variables")
 
-# Initialize MongoDB client with simplified SSL settings
+# Initialize MongoDB client with updated SSL settings
 try:
+    # For older pymongo versions, ssl_cert_reqs can cause issues
+    # Use a clean URI without any explicit SSL params and let pymongo handle it
+    if "ssl_cert_reqs" in MONGODB_URI:
+        # Remove the problematic parameter
+        import re
+        MONGODB_URI = re.sub(r'[&?]ssl_cert_reqs=[^&]*', '', MONGODB_URI)
+        print(f"Removed ssl_cert_reqs from MongoDB URI")
+    
+    # Also remove other potentially problematic SSL parameters
+    for param in ['tlsAllowInvalidCertificates', 'tlsAllowInvalidHostnames']:
+        if param in MONGODB_URI:
+            MONGODB_URI = re.sub(r'[&?]' + param + r'=[^&]*', '', MONGODB_URI)
+            print(f"Removed {param} from MongoDB URI")
+    
+    print("Connecting to MongoDB...")
+    
+    # Connect with minimal options
     client = MongoClient(MONGODB_URI, 
-                        connectTimeoutMS=30000, 
-                        socketTimeoutMS=30000,
-                        serverSelectionTimeoutMS=10000,
-                        ssl=True,
-                        ssl_cert_reqs='CERT_NONE',  # This disables certificate validation
-                        retryWrites=True,
-                        w="majority")
+                        serverSelectionTimeoutMS=5000,  # 5 second timeout
+                        connectTimeoutMS=5000,
+                        socketTimeoutMS=10000)
 
     # Test the connection - only log errors, don't fail
     try:
-        client.server_info()
-        print("Successfully connected to MongoDB")
+        server_info = client.server_info()
+        print(f"Successfully connected to MongoDB version: {server_info.get('version', 'unknown')}")
+        print(f"Available databases: {client.list_database_names()}")
     except Exception as e:
         print(f"Warning: MongoDB connection test failed: {str(e)}")
+        print(f"MongoDB URI format (redacted): {safe_uri}")
         # Don't raise the error - we'll attempt to continue anyway
         
     db = client[DB_NAME]
     pets_collection = db["pets"]
     users_collection = db["users"]
+    
+    # Print existing collections
+    print(f"Collections in {DB_NAME}: {db.list_collection_names()}")
 
-    # Async client for FastAPI with fixed SSL settings
+    # Async client for FastAPI with minimal parameters
+    print("Setting up async MongoDB client...")
     async_client = AsyncIOMotorClient(MONGODB_URI, 
-                                    connectTimeoutMS=30000, 
-                                    socketTimeoutMS=30000,
-                                    serverSelectionTimeoutMS=10000,
-                                    ssl=True,
-                                    ssl_cert_reqs='CERT_NONE',  # This disables certificate validation
-                                    retryWrites=True,
-                                    w="majority")
+                                    serverSelectionTimeoutMS=5000,  # 5 second timeout
+                                    connectTimeoutMS=5000,
+                                    socketTimeoutMS=10000)
 
     async_db = async_client[DB_NAME]
     async_pets_collection = async_db["pets"]
     async_users_collection = async_db["users"]
+    print("Async MongoDB client setup complete")
 except Exception as e:
     print(f"Error setting up MongoDB connection: {str(e)}")
     # Create empty placeholder collections for testing/development
