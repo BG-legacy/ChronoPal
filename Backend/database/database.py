@@ -45,6 +45,30 @@ async def get_client():
         print(f"Error connecting to MongoDB: {str(e)}")
         raise
 
+# Backward compatibility for test files
+# These are needed for test files that still import these variables
+async def get_async_client():
+    try:
+        client = AsyncIOMotorClient(
+            MONGODB_URI,
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=10000,
+            maxPoolSize=10,
+            minPoolSize=0,
+            maxIdleTimeMS=50000,
+            tlsCAFile=certifi.where()
+        )
+        return client
+    except Exception as e:
+        print(f"Error connecting to MongoDB: {str(e)}")
+        raise
+
+# Create objects for backward compatibility with tests
+async_client = get_async_client()
+async_db = async_client[DB_NAME]
+async_pets_collection = async_db["pets"]
+async_users_collection = async_db["users"]
+
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -246,7 +270,7 @@ class PetDB:
             db = client[DB_NAME]
             pets_collection = db["pets"]
             
-            cursor = pets_collection.find({"user_id": user_id})
+            cursor = pets_collection.find({"userId": user_id})
             pets = []
             async for doc in cursor:
                 # Convert ObjectId to string for each pet
@@ -260,6 +284,12 @@ class PetDB:
     @staticmethod
     async def update_pet(pet_id: str, pet_data: dict) -> Optional[Pet]:
         try:
+            # Import here to avoid circular import
+            from api.routes import get_mongo_client_func
+            client = get_mongo_client_func()
+            db = client[DB_NAME]
+            pets_collection = db["pets"]
+            
             # Remove None values from update data
             update_data = {k: v for k, v in pet_data.items() if v is not None}
             
@@ -270,13 +300,13 @@ class PetDB:
             try:
                 if ObjectId.is_valid(pet_id):
                     # Valid ObjectId format
-                    result = await async_pets_collection.update_one(
+                    result = await pets_collection.update_one(
                         {"_id": ObjectId(pet_id)},
                         {"$set": update_data}
                     )
                 else:
                     # Try string IDs
-                    result = await async_pets_collection.update_one(
+                    result = await pets_collection.update_one(
                         {"$or": [{"_id": pet_id}, {"id": pet_id}]},
                         {"$set": update_data}
                     )
@@ -298,10 +328,16 @@ class PetDB:
     @staticmethod
     async def delete_pet(pet_id: str) -> bool:
         try:
+            # Import here to avoid circular import
+            from api.routes import get_mongo_client_func
+            client = get_mongo_client_func()
+            db = client[DB_NAME]
+            pets_collection = db["pets"]
+            
             if ObjectId.is_valid(pet_id):
-                result = await async_pets_collection.delete_one({"_id": ObjectId(pet_id)})
+                result = await pets_collection.delete_one({"_id": ObjectId(pet_id)})
             else:
-                result = await async_pets_collection.delete_one({"$or": [{"_id": pet_id}, {"id": pet_id}]})
+                result = await pets_collection.delete_one({"$or": [{"_id": pet_id}, {"id": pet_id}]})
             return result.deleted_count > 0
         except Exception as e:
             print(f"[DEBUG] Error deleting pet {pet_id}: {str(e)}")
@@ -310,17 +346,23 @@ class PetDB:
     @staticmethod
     async def add_memory(pet_id: str, memory: str) -> Optional[Pet]:
         try:
+            # Import here to avoid circular import
+            from api.routes import get_mongo_client_func
+            client = get_mongo_client_func()
+            db = client[DB_NAME]
+            pets_collection = db["pets"]
+            
             # Try to handle the pet_id as ObjectId or string
             try:
                 if ObjectId.is_valid(pet_id):
                     # Valid ObjectId format
-                    result = await async_pets_collection.update_one(
+                    result = await pets_collection.update_one(
                         {"_id": ObjectId(pet_id)},
                         {"$push": {"memoryLog": memory}}
                     )
                 else:
                     # Try string IDs
-                    result = await async_pets_collection.update_one(
+                    result = await pets_collection.update_one(
                         {"$or": [{"_id": pet_id}, {"id": pet_id}]},
                         {"$push": {"memoryLog": memory}}
                     )
