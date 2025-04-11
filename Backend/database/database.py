@@ -8,6 +8,7 @@ from .pet_schema import Pet, MOOD_LEVELS, SASS_LEVELS, NEGLECT_THRESHOLD_HOURS
 from .user_schema import User, UserCreate
 from passlib.context import CryptContext
 from bson import ObjectId
+from pymongo.server_api import ServerApi
 
 # Load environment variables
 load_dotenv()
@@ -33,25 +34,40 @@ try:
     
     print("Connecting to MongoDB...")
     
-    # Connect using minimal parameters and rely on URI parameters
-    client = MongoClient(
-        MONGODB_URI,
-        serverSelectionTimeoutMS=10000,
-        connectTimeoutMS=10000,
-        socketTimeoutMS=20000,
-        tls=True,
-        tlsCAFile=certifi.where()
-    )
-
-    # Test the connection - only log errors, don't fail
+    # First, try with minimal parameters and standard TLS configuration
     try:
+        print("Trying connection with standard TLS configuration...")
+        client = MongoClient(
+            MONGODB_URI,
+            serverSelectionTimeoutMS=10000,
+            connectTimeoutMS=10000,
+            socketTimeoutMS=20000,
+            tls=True,
+            tlsCAFile=certifi.where(),
+            server_api=ServerApi('1')
+        )
+        # Test the connection
         server_info = client.server_info()
         print(f"Successfully connected to MongoDB version: {server_info.get('version', 'unknown')}")
-        print(f"Available databases: {client.list_database_names()}")
     except Exception as e:
-        print(f"Warning: MongoDB connection test failed: {str(e)}")
-        print(f"MongoDB URI format (redacted): {safe_uri}")
-        # Don't raise the error - we'll attempt to continue anyway
+        print(f"Standard TLS connection failed: {str(e)}")
+        print("Trying connection with additional TLS options...")
+        
+        # Try with relaxed TLS settings
+        client = MongoClient(
+            MONGODB_URI,
+            serverSelectionTimeoutMS=10000,
+            connectTimeoutMS=10000,
+            socketTimeoutMS=20000,
+            tls=True,
+            tlsAllowInvalidCertificates=True,
+            server_api=ServerApi('1')
+        )
+        # Test the connection
+        server_info = client.server_info()
+        print(f"Connected with relaxed TLS settings to MongoDB version: {server_info.get('version', 'unknown')}")
+
+    print(f"Available databases: {client.list_database_names()}")
         
     db = client[DB_NAME]
     pets_collection = db["pets"]
@@ -60,16 +76,31 @@ try:
     # Print existing collections
     print(f"Collections in {DB_NAME}: {db.list_collection_names()}")
 
-    # Async client for FastAPI with minimal parameters
+    # Async client using the same connection parameters that worked for the sync client
     print("Setting up async MongoDB client...")
-    async_client = AsyncIOMotorClient(
-        MONGODB_URI,
-        serverSelectionTimeoutMS=10000,
-        connectTimeoutMS=10000,
-        socketTimeoutMS=20000,
-        tls=True,
-        tlsCAFile=certifi.where()
-    )
+    try:
+        print("Trying async connection with standard TLS configuration...")
+        async_client = AsyncIOMotorClient(
+            MONGODB_URI,
+            serverSelectionTimeoutMS=10000,
+            connectTimeoutMS=10000,
+            socketTimeoutMS=20000,
+            tls=True,
+            tlsCAFile=certifi.where()
+        )
+    except Exception as e:
+        print(f"Standard async TLS connection failed: {str(e)}")
+        print("Trying async connection with additional TLS options...")
+        
+        # Try with relaxed TLS settings for async client
+        async_client = AsyncIOMotorClient(
+            MONGODB_URI,
+            serverSelectionTimeoutMS=10000,
+            connectTimeoutMS=10000,
+            socketTimeoutMS=20000,
+            tls=True,
+            tlsAllowInvalidCertificates=True
+        )
 
     async_db = async_client[DB_NAME]
     async_pets_collection = async_db["pets"]

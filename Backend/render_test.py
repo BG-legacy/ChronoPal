@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+"""
+This script tests MongoDB connectivity specifically for Render deployment.
+It tries various connection methods and reports the results.
+"""
+
 import os
 import sys
 import platform
@@ -14,6 +20,7 @@ print(f"Python version: {platform.python_version()}")
 print(f"SSL version: {ssl.OPENSSL_VERSION}")
 print(f"Certifi path: {certifi.where()}")
 print(f"Pymongo version: {pymongo_version}")
+print(f"Environment: {'RENDER' if os.environ.get('IS_RENDER') else 'Local'}")
 print("==========================\n")
 
 # Load environment variables
@@ -27,104 +34,97 @@ if not MONGODB_URI or not DB_NAME:
     print("ERROR: MongoDB settings not found in environment variables")
     sys.exit(1)
 
-print(f"Testing connection to database: {DB_NAME}")
 uri_parts = MONGODB_URI.split('@') if MONGODB_URI else []
 if len(uri_parts) > 1:
     safe_uri = f"...@{uri_parts[-1]}"
     print(f"Using MongoDB URI: {safe_uri}")
 
-# Test 1: Simple connection
-try:
-    print("\nTest 1: Attempting simple connection...")
-    client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
-    server_info = client.server_info()
-    print(f"SUCCESS: Connected to MongoDB version: {server_info.get('version')}")
-    print(f"Collections in database: {client[DB_NAME].list_collection_names()}")
-    client.close()
-    print("Test 1: Success!")
-except Exception as e:
-    print(f"Test 1 ERROR: {type(e).__name__} - {str(e)}")
+# Try different connection strategies
 
-# Test 2: Using tlsCAFile
+# Strategy 1: Simple ServerApi
 try:
-    print("\nTest 2: Using tlsCAFile with system CA certificates...")
-    client = MongoClient(
-        MONGODB_URI,
-        serverSelectionTimeoutMS=5000,
-        tlsCAFile=certifi.where()
-    )
-    server_info = client.server_info()
-    print(f"SUCCESS: Connected to MongoDB version: {server_info.get('version')}")
-    print(f"Collections in database: {client[DB_NAME].list_collection_names()}")
-    client.close()
-    print("Test 2: Success!")
-except Exception as e:
-    print(f"Test 2 ERROR: {type(e).__name__} - {str(e)}")
-
-# Test 3: Using ServerApi for version compatibility
-try:
-    print("\nTest 3: Using ServerApi for version compatibility...")
+    print("\nStrategy 1: Using ServerApi...")
     client = MongoClient(
         MONGODB_URI,
         server_api=ServerApi('1'),
-        serverSelectionTimeoutMS=5000,
-        tls=True,
-        tlsCAFile=certifi.where()
+        serverSelectionTimeoutMS=5000
     )
     server_info = client.server_info()
     print(f"SUCCESS: Connected to MongoDB version: {server_info.get('version')}")
-    print(f"Collections in database: {client[DB_NAME].list_collection_names()}")
     client.close()
-    print("Test 3: Success!")
 except Exception as e:
-    print(f"Test 3 ERROR: {type(e).__name__} - {str(e)}")
+    print(f"ERROR: {type(e).__name__} - {str(e)}")
 
-# Test 4: With relaxed TLS settings
+# Strategy 2: TLS with CA File
 try:
-    print("\nTest 4: With relaxed TLS settings...")
+    print("\nStrategy 2: TLS with CA File...")
     client = MongoClient(
         MONGODB_URI,
-        serverSelectionTimeoutMS=5000,
         tls=True,
-        tlsAllowInvalidCertificates=True
+        tlsCAFile=certifi.where(),
+        serverSelectionTimeoutMS=5000
     )
     server_info = client.server_info()
     print(f"SUCCESS: Connected to MongoDB version: {server_info.get('version')}")
-    print(f"Collections in database: {client[DB_NAME].list_collection_names()}")
     client.close()
-    print("Test 4: Success!")
 except Exception as e:
-    print(f"Test 4 ERROR: {type(e).__name__} - {str(e)}")
+    print(f"ERROR: {type(e).__name__} - {str(e)}")
 
-# Test 5: Adding connect=False option
+# Strategy 3: TLS with Allow Invalid Certificates
 try:
-    print("\nTest 5: Adding connect=False option...")
+    print("\nStrategy 3: TLS with Allow Invalid Certificates...")
     client = MongoClient(
         MONGODB_URI,
-        serverSelectionTimeoutMS=5000,
-        connect=False,
         tls=True,
-        tlsCAFile=certifi.where()
+        tlsAllowInvalidCertificates=True,
+        serverSelectionTimeoutMS=5000
     )
     server_info = client.server_info()
     print(f"SUCCESS: Connected to MongoDB version: {server_info.get('version')}")
-    print(f"Collections in database: {client[DB_NAME].list_collection_names()}")
     client.close()
-    print("Test 5: Success!")
 except Exception as e:
-    print(f"Test 5 ERROR: {type(e).__name__} - {str(e)}")
+    print(f"ERROR: {type(e).__name__} - {str(e)}")
 
-# Test 6: Minimal URI connection
+# Strategy 4: ServerApi with TLS and CA File
 try:
-    print("\nTest 6: Minimal URI connection (no TLS params)...")
-    # Try to connect only using the URI without additional TLS parameters
+    print("\nStrategy 4: ServerApi with TLS and CA File...")
+    client = MongoClient(
+        MONGODB_URI,
+        server_api=ServerApi('1'),
+        tls=True,
+        tlsCAFile=certifi.where(),
+        serverSelectionTimeoutMS=5000
+    )
+    server_info = client.server_info()
+    print(f"SUCCESS: Connected to MongoDB version: {server_info.get('version')}")
+    client.close()
+except Exception as e:
+    print(f"ERROR: {type(e).__name__} - {str(e)}")
+
+# Strategy 5: ServerApi with TLS Allow Invalid Certificates
+try:
+    print("\nStrategy 5: ServerApi with TLS Allow Invalid Certificates...")
+    client = MongoClient(
+        MONGODB_URI,
+        server_api=ServerApi('1'),
+        tls=True,
+        tlsAllowInvalidCertificates=True,
+        serverSelectionTimeoutMS=5000
+    )
+    server_info = client.server_info()
+    print(f"SUCCESS: Connected to MongoDB version: {server_info.get('version')}")
+    client.close()
+except Exception as e:
+    print(f"ERROR: {type(e).__name__} - {str(e)}")
+
+# Strategy 6: URI Only
+try:
+    print("\nStrategy 6: URI Only (minimal parameters)...")
     client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
     server_info = client.server_info()
     print(f"SUCCESS: Connected to MongoDB version: {server_info.get('version')}")
-    print(f"Collections in database: {client[DB_NAME].list_collection_names()}")
     client.close()
-    print("Test 6: Success!")
 except Exception as e:
-    print(f"Test 6 ERROR: {type(e).__name__} - {str(e)}")
+    print(f"ERROR: {type(e).__name__} - {str(e)}")
 
 print("\nAll connection tests completed.") 
