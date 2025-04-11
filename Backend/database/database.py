@@ -31,21 +31,14 @@ try:
     import ssl
     import certifi
     
-    # Create custom SSL context
-    ssl_context = ssl.create_default_context(cafile=certifi.where())
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    print("Connecting to MongoDB...")
     
-    print("Connecting to MongoDB with custom SSL context...")
-    
-    # Connect with SSL context
+    # Connect using minimal parameters and rely on URI parameters
     client = MongoClient(
         MONGODB_URI,
-        serverSelectionTimeoutMS=10000,  # Increased timeout
+        serverSelectionTimeoutMS=10000,
         connectTimeoutMS=10000,
-        socketTimeoutMS=20000,
-        tlsAllowInvalidCertificates=True,
-        ssl=True
+        socketTimeoutMS=20000
     )
 
     # Test the connection - only log errors, don't fail
@@ -71,9 +64,7 @@ try:
         MONGODB_URI,
         serverSelectionTimeoutMS=10000,
         connectTimeoutMS=10000,
-        socketTimeoutMS=20000,
-        tlsAllowInvalidCertificates=True,
-        ssl=True
+        socketTimeoutMS=20000
     )
 
     async_db = async_client[DB_NAME]
