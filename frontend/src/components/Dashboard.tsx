@@ -550,6 +550,21 @@ const Dashboard: React.FC = () => {
       <div className="retro-header">
         <h1 className="site-title">ChronoPal</h1>
         <p className="retro-title">Your l33t Digital BFF from Y2K!</p>
+        <button 
+          onClick={async () => {
+            try {
+              await apiService.logout();
+              navigate('/');
+            } catch (error) {
+              console.error('Logout failed:', error);
+              showNotification('Failed to logout. Please try again.', 'warning');
+            }
+          }}
+          className="retro-button logout-button"
+          style={{ marginTop: '10px' }}
+        >
+          Logout
+        </button>
         {/* Debug Controls */}
         <div style={{ marginTop: '10px' }}>
   
