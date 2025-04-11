@@ -45,7 +45,6 @@ try:
         connectTimeoutMS=10000,
         socketTimeoutMS=20000,
         tlsAllowInvalidCertificates=True,
-        ssl_cert_reqs=ssl.CERT_NONE,
         ssl=True
     )
 
@@ -74,7 +73,6 @@ try:
         connectTimeoutMS=10000,
         socketTimeoutMS=20000,
         tlsAllowInvalidCertificates=True,
-        ssl_cert_reqs=ssl.CERT_NONE,
         ssl=True
     )
 
