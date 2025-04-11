@@ -1,2 +1,0 @@
-web: ./start.sh
-test_mongodb: ./start_render_test.sh 
