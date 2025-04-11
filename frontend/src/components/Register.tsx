@@ -80,12 +80,12 @@ const Register: React.FC = () => {
       const now = new Date().toISOString();
 
       // Create the pet
-      const newPet: Omit<Pet, 'id'> = {
+      const newPet = {
         name: petName,
         species: 'Digital',
         mood: 'happy',
         level: 1,
-        sass_level: 1,
+        sassLevel: 1,
         userId: user.id,
         lastFed: now,
         lastInteraction: now,
@@ -94,12 +94,15 @@ const Register: React.FC = () => {
       };
 
       // Wait for pet creation to complete
-      await apiService.savePet(newPet as Pet);
-      
-      // Verify pet was created
-      const createdPet = await apiService.getUserPet();
+      const createdPet = await apiService.savePet(newPet);
       if (!createdPet) {
         throw new Error('Failed to create pet');
+      }
+
+      // Verify pet was created
+      const verifiedPet = await apiService.getUserPet();
+      if (!verifiedPet) {
+        throw new Error('Failed to verify pet creation');
       }
 
       setSuccessMessage('Pet created successfully! Redirecting to dashboard...');

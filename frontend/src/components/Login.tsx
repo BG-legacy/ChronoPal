@@ -52,6 +52,7 @@ const Login: React.FC = () => {
                   className="retro-input"
                   required
                   disabled={isLoading}
+                  autoComplete="username"
                 />
               </div>
             </div>
@@ -69,6 +70,7 @@ const Login: React.FC = () => {
                   className="retro-input"
                   required
                   disabled={isLoading}
+                  autoComplete="current-password"
                 />
               </div>
             </div>

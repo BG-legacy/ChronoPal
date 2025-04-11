@@ -66,7 +66,7 @@ const PetDisplay: React.FC<PetDisplayProps> = ({ pet, isFeeding, isPlaying, isTe
           <div className="stat-row">
             <span className="stat-label">Sass Level:</span>
             <span className="stat-value">
-              {getSassEmoji(pet.sass_level)} {pet.sass_level}
+              {getSassEmoji(pet.sassLevel)} {pet.sassLevel}
             </span>
           </div>
         </div>

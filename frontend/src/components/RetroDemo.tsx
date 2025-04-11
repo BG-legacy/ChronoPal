@@ -37,7 +37,7 @@ const RetroDemo: React.FC<RetroDemoProps> = ({ pet }) => {
               <p>Species: {pet.species}</p>
               <p>Level: {pet.level}</p>
               <p>Mood: {pet.mood}</p>
-              <p>Sass Level: {pet.sass_level}</p>
+              <p>Sass Level: {pet.sassLevel}</p>
               <p>Interactions: {pet.interactionCount}</p>
             </div>
             <div>

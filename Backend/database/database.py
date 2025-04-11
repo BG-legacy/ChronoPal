@@ -109,10 +109,10 @@ class PetDB:
             if isinstance(pet_data, dict):
                 # If it's a dictionary, create a Pet object
                 pet = Pet(**pet_data)
-                pet_dict = pet.model_dump(by_alias=True)
+                pet_dict = pet.model_dump()
             else:
                 # If it's already a Pet object, just get the dictionary
-                pet_dict = pet_data.model_dump(by_alias=True)
+                pet_dict = pet_data.model_dump()
 
             # Remove _id if it exists to let MongoDB generate it
             if "_id" in pet_dict:
@@ -130,19 +130,75 @@ class PetDB:
     @staticmethod
     async def get_pet(pet_id: str) -> Optional[Pet]:
         try:
-            pet = await async_pets_collection.find_one({"_id": ObjectId(pet_id)})
+            print(f"[DEBUG] Looking for pet with ID: {pet_id}")
+            print(f"[DEBUG] Pet ID type: {type(pet_id)}")
+            print(f"[DEBUG] Pet ID value: {pet_id}")
+            
+            # Dump the first few pets in the collection for debugging
+            print(f"[DEBUG] Dumping first 3 pets in collection:")
+            cursor = async_pets_collection.find().limit(3)
+            idx = 0
+            async for pet in cursor:
+                idx += 1
+                if pet:
+                    pet_id_str = str(pet.get("_id", "None"))
+                    print(f"[DEBUG] Pet {idx}: _id={pet_id_str}, name={pet.get('name', 'None')}, userId={pet.get('userId', 'None')}")
+            
+            # First, try with the _id field and ObjectId
+            try:
+                print(f"[DEBUG] Attempting to lookup with ObjectId...")
+                obj_id = ObjectId(pet_id)
+                print(f"[DEBUG] Created ObjectId: {obj_id}")
+                pet = await async_pets_collection.find_one({"_id": obj_id})
+                if pet:
+                    print(f"[DEBUG] Found pet with _id as ObjectId: {pet_id}")
+                    pet["_id"] = str(pet["_id"])
+                    return Pet(**pet) if pet else None
+                else:
+                    print(f"[DEBUG] No pet found with ObjectId: {obj_id}")
+            except Exception as e:
+                print(f"[DEBUG] Error looking up by ObjectId: {str(e)}")
+            
+            # Next, try with string _id
+            print(f"[DEBUG] Attempting to lookup with string _id...")
+            pet = await async_pets_collection.find_one({"_id": pet_id})
             if pet:
+                print(f"[DEBUG] Found pet with _id as string: {pet_id}")
                 pet["_id"] = str(pet["_id"])
-            return Pet(**pet) if pet else None
-        except:
+                return Pet(**pet) if pet else None
+            else:
+                print(f"[DEBUG] No pet found with string _id: {pet_id}")
+            
+            # Next, try with the id field (frontend might be passing this)
+            print(f"[DEBUG] Attempting to lookup with id field...")
+            pet = await async_pets_collection.find_one({"id": pet_id})
+            if pet:
+                print(f"[DEBUG] Found pet with id field: {pet_id}")
+                pet["_id"] = str(pet["_id"])
+                return Pet(**pet) if pet else None
+            else:
+                print(f"[DEBUG] No pet found with id field: {pet_id}")
+                
+            print(f"[DEBUG] No pet found with any ID format for {pet_id}")
+            return None
+        except Exception as e:
+            print(f"[DEBUG] Unexpected error in get_pet: {str(e)}")
             return None
 
     @staticmethod
     async def get_pets_by_user(user_id: str) -> List[Pet]:
-        pets = await async_pets_collection.find({"userId": user_id}).to_list(length=None)
-        for pet in pets:
-            pet["_id"] = str(pet["_id"])
-        return [Pet(**pet) for pet in pets]
+        """Get all pets for a user"""
+        try:
+            cursor = async_pets_collection.find({"userId": user_id})
+            pets = []
+            async for pet in cursor:
+                if pet:
+                    pet["_id"] = str(pet["_id"])
+                    pets.append(Pet(**pet))
+            return pets
+        except Exception as e:
+            print(f"Error getting pets for user {user_id}: {str(e)}")
+            raise
 
     @staticmethod
     async def update_pet(pet_id: str, pet_data: dict) -> Optional[Pet]:
@@ -150,39 +206,80 @@ class PetDB:
             # Remove None values from update data
             update_data = {k: v for k, v in pet_data.items() if v is not None}
             
-            if update_data:
-                await async_pets_collection.update_one(
-                    {"_id": ObjectId(pet_id)},
-                    {"$set": update_data}
-                )
+            if not update_data:
+                return await PetDB.get_pet(pet_id)
             
-            updated_pet = await async_pets_collection.find_one({"_id": ObjectId(pet_id)})
-            if updated_pet:
-                updated_pet["_id"] = str(updated_pet["_id"])
-            return Pet(**updated_pet) if updated_pet else None
-        except:
+            # Try to handle the pet_id as ObjectId or string
+            try:
+                if ObjectId.is_valid(pet_id):
+                    # Valid ObjectId format
+                    result = await async_pets_collection.update_one(
+                        {"_id": ObjectId(pet_id)},
+                        {"$set": update_data}
+                    )
+                else:
+                    # Try string IDs
+                    result = await async_pets_collection.update_one(
+                        {"$or": [{"_id": pet_id}, {"id": pet_id}]},
+                        {"$set": update_data}
+                    )
+                
+                if result.matched_count == 0:
+                    print(f"[DEBUG] No pet matched for update with ID: {pet_id}")
+                    return None
+                    
+            except Exception as e:
+                print(f"[DEBUG] Error updating pet {pet_id}: {str(e)}")
+                return None
+            
+            # Get the updated pet
+            return await PetDB.get_pet(pet_id)
+        except Exception as e:
+            print(f"[DEBUG] Unexpected error in update_pet: {str(e)}")
             return None
 
     @staticmethod
     async def delete_pet(pet_id: str) -> bool:
         try:
-            result = await async_pets_collection.delete_one({"_id": ObjectId(pet_id)})
+            if ObjectId.is_valid(pet_id):
+                result = await async_pets_collection.delete_one({"_id": ObjectId(pet_id)})
+            else:
+                result = await async_pets_collection.delete_one({"$or": [{"_id": pet_id}, {"id": pet_id}]})
             return result.deleted_count > 0
-        except:
+        except Exception as e:
+            print(f"[DEBUG] Error deleting pet {pet_id}: {str(e)}")
             return False
 
     @staticmethod
     async def add_memory(pet_id: str, memory: str) -> Optional[Pet]:
         try:
-            await async_pets_collection.update_one(
-                {"_id": ObjectId(pet_id)},
-                {"$push": {"memoryLog": memory}}
-            )
-            updated_pet = await async_pets_collection.find_one({"_id": ObjectId(pet_id)})
-            if updated_pet:
-                updated_pet["_id"] = str(updated_pet["_id"])
-            return Pet(**updated_pet) if updated_pet else None
-        except:
+            # Try to handle the pet_id as ObjectId or string
+            try:
+                if ObjectId.is_valid(pet_id):
+                    # Valid ObjectId format
+                    result = await async_pets_collection.update_one(
+                        {"_id": ObjectId(pet_id)},
+                        {"$push": {"memoryLog": memory}}
+                    )
+                else:
+                    # Try string IDs
+                    result = await async_pets_collection.update_one(
+                        {"$or": [{"_id": pet_id}, {"id": pet_id}]},
+                        {"$push": {"memoryLog": memory}}
+                    )
+                
+                if result.matched_count == 0:
+                    print(f"[DEBUG] No pet matched for memory update with ID: {pet_id}")
+                    return None
+                    
+            except Exception as e:
+                print(f"[DEBUG] Error adding memory to pet {pet_id}: {str(e)}")
+                return None
+                
+            # Get the updated pet
+            return await PetDB.get_pet(pet_id)
+        except Exception as e:
+            print(f"[DEBUG] Unexpected error in add_memory: {str(e)}")
             return None
 
     @staticmethod
@@ -228,12 +325,12 @@ class PetDB:
             # For 3 or more neglect periods, increase by 2 levels
             # For 1-2 neglect periods, increase by 1 level
             sass_increase = 2 if neglect_periods >= 3 else 1
-            new_sass_level = min(pet.sass_level + sass_increase, SASS_LEVELS["SAVAGE"])
+            new_sass_level = min(pet.sassLevel + sass_increase, SASS_LEVELS["SAVAGE"])
             
             # Update pet state based on neglect
             updates = {
                 "mood": MOOD_LEVELS["GRUMPY"],
-                "sass_level": new_sass_level,
+                "sassLevel": new_sass_level,
                 "level": max(pet.level - neglect_periods, 1)
             }
             
@@ -256,21 +353,21 @@ class PetDB:
             return None
             
         new_interaction_count = pet.interactionCount + 1
-        new_sass_level = pet.sass_level
+        new_sass_level = pet.sassLevel
         
         # Update sass level based on interaction milestones
-        if new_interaction_count >= 100 and pet.sass_level < SASS_LEVELS["SAVAGE"]:
+        if new_interaction_count >= 100 and pet.sassLevel < SASS_LEVELS["SAVAGE"]:
             new_sass_level = SASS_LEVELS["SAVAGE"]
-        elif new_interaction_count >= 50 and pet.sass_level < SASS_LEVELS["SASSY"]:
+        elif new_interaction_count >= 50 and pet.sassLevel < SASS_LEVELS["SASSY"]:
             new_sass_level = SASS_LEVELS["SASSY"]
-        elif new_interaction_count >= 25 and pet.sass_level < SASS_LEVELS["SNARKY"]:
+        elif new_interaction_count >= 25 and pet.sassLevel < SASS_LEVELS["SNARKY"]:
             new_sass_level = SASS_LEVELS["SNARKY"]
-        elif new_interaction_count >= 10 and pet.sass_level < SASS_LEVELS["PLAYFUL"]:
+        elif new_interaction_count >= 10 and pet.sassLevel < SASS_LEVELS["PLAYFUL"]:
             new_sass_level = SASS_LEVELS["PLAYFUL"]
             
         return await PetDB.update_pet(pet_id, {
             "interactionCount": new_interaction_count,
-            "sass_level": new_sass_level,
+            "sassLevel": new_sass_level,
             "lastInteraction": datetime.now(timezone.utc)
         })
 
@@ -278,4 +375,66 @@ class PetDB:
     async def get_sass_level(pet_id: str) -> Optional[int]:
         """Get the current sass level of a pet"""
         pet = await PetDB.get_pet(pet_id)
-        return pet.sass_level if pet else None 
+        return pet.sassLevel if pet else None
+    
+    # New comprehensive interaction methods
+    @staticmethod
+    async def feed_pet(pet_id: str) -> Optional[Pet]:
+        """Comprehensive method to handle feeding a pet"""
+        try:
+            print(f"[DB] Processing feed action for pet: {pet_id}")
+            
+            # Update pet's feeding timestamp and mood
+            await PetDB.update_last_fed(pet_id)
+            await PetDB.update_mood(pet_id, "happy")
+            
+            # Record the interaction in memory log
+            await PetDB.add_memory(pet_id, "Pet was fed and enjoyed the meal!")
+            
+            # Increment interaction count and update last interaction time
+            return await PetDB.increment_interaction(pet_id)
+        except Exception as e:
+            print(f"[DB] Error in feed_pet: {str(e)}")
+            return None
+            
+    @staticmethod
+    async def play_with_pet(pet_id: str) -> Optional[Pet]:
+        """Comprehensive method to handle playing with a pet"""
+        try:
+            print(f"[DB] Processing play action for pet: {pet_id}")
+            
+            # Update pet's mood to excited
+            await PetDB.update_mood(pet_id, "excited")
+            
+            # Record the interaction in memory log
+            await PetDB.add_memory(pet_id, "Pet played and had a great time!")
+            
+            # Increment interaction count and update last interaction time
+            return await PetDB.increment_interaction(pet_id)
+        except Exception as e:
+            print(f"[DB] Error in play_with_pet: {str(e)}")
+            return None
+            
+    @staticmethod
+    async def teach_pet(pet_id: str, lesson: str) -> Optional[Pet]:
+        """Comprehensive method to handle teaching a pet something new"""
+        try:
+            print(f"[DB] Processing teach action for pet: {pet_id}, lesson: {lesson}")
+            
+            # Get current pet to update level
+            pet = await PetDB.get_pet(pet_id)
+            if not pet:
+                print(f"[DB] Pet not found with ID: {pet_id}")
+                return None
+                
+            # Add the lesson to pet's memory
+            await PetDB.add_memory(pet_id, f"Learned: {lesson}")
+            
+            # Increase pet's level
+            await PetDB.update_level(pet_id, pet.level + 1)
+            
+            # Increment interaction count and update last interaction time
+            return await PetDB.increment_interaction(pet_id)
+        except Exception as e:
+            print(f"[DB] Error in teach_pet: {str(e)}")
+            return None 

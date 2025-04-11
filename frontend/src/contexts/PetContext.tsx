@@ -42,7 +42,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         species: 'Digital',
         mood: 'happy',
         level: 1,
-        sass_level: 1,
+        sassLevel: 1,
         lastFed: now,
         lastInteraction: now,
         interactionCount: 0,

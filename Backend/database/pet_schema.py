@@ -30,7 +30,7 @@ class Pet(BaseModel):
     species: str
     mood: str = Field(default=MOOD_LEVELS["HAPPY"])
     level: int = Field(default=1)
-    sass_level: int = Field(default=SASS_LEVELS["SWEET"])
+    sassLevel: int = Field(default=SASS_LEVELS["SWEET"])
     userId: str
     lastFed: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     lastInteraction: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -48,7 +48,7 @@ class Pet(BaseModel):
                 "species": "cat",
                 "mood": MOOD_LEVELS["HAPPY"],
                 "level": 1,
-                "sass_level": SASS_LEVELS["SWEET"],
+                "sassLevel": SASS_LEVELS["SWEET"],
                 "userId": "user_id_here"
             }
         }
