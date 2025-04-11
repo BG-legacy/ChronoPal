@@ -9,11 +9,23 @@ set +o allexport
 export PYTHONPATH=$PYTHONPATH:$(pwd)
 export PORT=${PORT:-10000}
 
-# Start Gunicorn with the wsgi.py entry point
+# Print Python version and path info for debugging
+echo "Python version:"
+python --version
+echo "Python path:"
+python -c "import sys; print(sys.path)"
+echo "Current directory:"
+pwd
+echo "Directory contents:"
+ls -la
+
+# Try to start with wsgi.py first
+echo "Starting server with wsgi.py entry point..."
 exec gunicorn wsgi:app \
     --bind 0.0.0.0:$PORT \
     --workers 4 \
     --worker-class uvicorn.workers.UvicornWorker \
-    --log-level info \
+    --log-level debug \
+    --timeout 120 \
     --access-logfile - \
     --error-logfile - 
