@@ -258,26 +258,107 @@ class ApiService {
 
   public async chatWithPet(request: ChatRequest): Promise<ChatResponse> {
     try {
-      const petId = await this.getCorrectPetId();
+      // Instead of using getCorrectPetId, directly get the current pet from fixed-pet endpoint
+      let petId = request.pet_id;
+      
+      // If pet ID is missing or invalid, try to get a valid one from the fixed-pet endpoint
+      if (!petId || petId === 'null' || petId === 'undefined') {
+        try {
+          const pet = await this.getUserPet();
+          if (pet && pet.id) {
+            petId = pet.id;
+            console.log('[apiService] Retrieved pet ID from fixed-pet endpoint:', petId);
+          }
+        } catch (err) {
+          console.error('[apiService] Failed to get pet from fixed-pet endpoint:', err);
+          // Use stored ID as fallback
+          const storedId = localStorage.getItem('currentPetId');
+          if (storedId) {
+            petId = storedId;
+            console.log('[apiService] Using stored pet ID as fallback:', petId);
+          }
+        }
+      }
+      
+      console.log('[apiService] Sending chat request with pet ID:', petId);
       
       const response = await axios.post<ChatResponse>(`${API_BASE_URL}/api/chat`, {
-        ...request,
+        message: request.message,
         pet_id: petId
       }, {
         headers: this.headers
       });
+      
       return response.data;
-    } catch (error) {
-      console.error('Error in chatWithPet:', error);
+    } catch (error: any) {
+      console.error('[apiService] Error in chatWithPet:', error);
+      
+      // If we get a 404 (pet not found), try to correct the issue by getting a new pet
+      if (error.response?.status === 404) {
+        console.log('[apiService] Pet not found error. Attempting to recover...');
+        try {
+          // Try getting a valid pet from fixed-pet endpoint
+          const pet = await this.getUserPet();
+          if (pet && pet.id) {
+            // Store the correct ID
+            localStorage.setItem('currentPetId', pet.id);
+            
+            // Retry the chat request with the new ID
+            console.log('[apiService] Retrying chat with new pet ID:', pet.id);
+            const retryResponse = await axios.post<ChatResponse>(`${API_BASE_URL}/api/chat`, {
+              message: request.message,
+              pet_id: pet.id
+            }, {
+              headers: this.headers
+            });
+            
+            return retryResponse.data;
+          }
+        } catch (retryError) {
+          console.error('[apiService] Recovery attempt failed:', retryError);
+        }
+      }
+      
+      // Throw the original error if recovery failed or for other error types
       throw error;
     }
   }
 
   public async savePet(pet: Partial<Pet>): Promise<Pet> {
-    const response = await axios.post<Pet>(`${API_BASE_URL}/api/save-pet`, pet, {
-      headers: this.headers
-    });
-    return response.data;
+    try {
+      const response = await axios.post<Pet>(`${API_BASE_URL}/api/save-pet`, pet, {
+        headers: this.headers
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Error saving pet:', error);
+      throw error;
+    }
+  }
+
+  public async resetPet(): Promise<Pet> {
+    try {
+      console.log('[apiService] Requesting pet reset from API...');
+      const response = await axios.post<Pet>(`${API_BASE_URL}/api/reset-pet`, null, {
+        headers: this.headers
+      });
+      
+      console.log('[apiService] Pet reset successful. New pet:', response.data);
+      
+      // Store the new pet ID
+      if (response.data.id) {
+        localStorage.setItem('currentPetId', response.data.id);
+      }
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('[apiService] Error resetting pet:', error);
+      if (error.response?.status === 401) {
+        this.clearSession();
+        throw new Error('Session expired. Please log in again.');
+      }
+      throw error;
+    }
   }
 }
 

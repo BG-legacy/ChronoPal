@@ -255,44 +255,50 @@ async def feed_pet(request: FeedPetRequest, current_user: User = Depends(get_cur
 
 @router.post("/feed-pet-by-user")
 async def feed_pet_by_user(current_user: User = Depends(get_current_user)):
-    """Feed the user's first pet, fetching it directly from user's pets"""
+    """Feed the pet without requiring pet_id - automatically fetches user's pet"""
     try:
-        print(f"Received feed-pet-by-user request for user: {current_user.id}")
+        print(f"[API] Feed pet by user request for user ID: {current_user.id}")
         
-        # Get all of the user's pets
-        pets = await PetDB.get_pets_by_user(str(current_user.id))
-        
-        if not pets or len(pets) == 0:
-            print(f"No pets found for user: {current_user.id}")
-            raise HTTPException(status_code=404, detail="No pets found for user")
+        # Get the user's pet
+        pets = await PetDB.get_pets_by_user(current_user.id)
+        if not pets:
+            print(f"[API] No pets found for user: {current_user.id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No pets found for user"
+            )
         
         # Use the first pet (users currently only have one pet)
         pet = pets[0]
-        pet_id = str(pet.id)
         
-        print(f"Found pet with ID: {pet_id}, Name: {pet.name}, User: {pet.userId}")
+        # Check if pet's battery is depleted
+        if getattr(pet, 'batteryLevel', 100) <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Pet's battery is depleted. Reset your pet to continue."
+            )
         
-        # Update this specific pet
-        updated_pet = await PetDB.feed_pet(pet_id)
+        # Feed the pet
+        updated_pet = await PetDB.feed_pet(str(pet.id))
         
         if not updated_pet:
-            print(f"Failed to update pet: {pet_id}")
-            raise HTTPException(status_code=500, detail="Failed to update pet")
+            print(f"[API] Pet not found after update: {pet.id}")
+            raise HTTPException(status_code=404, detail="Pet not found after update")
         
         # Ensure the pet has both id and _id for frontend compatibility
         updated_pet_dict = updated_pet.model_dump()
         if '_id' in updated_pet_dict and not updated_pet_dict.get('id'):
             updated_pet_dict['id'] = updated_pet_dict['_id']
         
-        print(f"Feed interaction successful. Updated pet ID: {updated_pet_dict.get('id')}")
+        print(f"[API] Feed interaction successful. Updated pet ID: {updated_pet_dict.get('id') or updated_pet_dict.get('_id')}")
         return updated_pet_dict
     except Exception as e:
-        print(f"Error in feed_pet_by_user: {str(e)}")
+        print(f"[API] Error in feed_pet_by_user: {str(e)}")
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail=f"Failed to feed pet: {str(e)}"
         )
 
 @router.post("/play-with-pet")
@@ -336,44 +342,50 @@ async def play_with_pet(request: PlayPetRequest, current_user: User = Depends(ge
 
 @router.post("/play-with-pet-by-user")
 async def play_with_pet_by_user(current_user: User = Depends(get_current_user)):
-    """Play with the user's first pet, fetching it directly from user's pets"""
+    """Play with the pet without requiring pet_id - automatically fetches user's pet"""
     try:
-        print(f"Received play-with-pet-by-user request for user: {current_user.id}")
+        print(f"[API] Play with pet by user request for user ID: {current_user.id}")
         
-        # Get all of the user's pets
-        pets = await PetDB.get_pets_by_user(str(current_user.id))
-        
-        if not pets or len(pets) == 0:
-            print(f"No pets found for user: {current_user.id}")
-            raise HTTPException(status_code=404, detail="No pets found for user")
+        # Get the user's pet
+        pets = await PetDB.get_pets_by_user(current_user.id)
+        if not pets:
+            print(f"[API] No pets found for user: {current_user.id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No pets found for user"
+            )
         
         # Use the first pet (users currently only have one pet)
         pet = pets[0]
-        pet_id = str(pet.id)
         
-        print(f"Found pet with ID: {pet_id}, Name: {pet.name}, User: {pet.userId}")
+        # Check if pet's battery is depleted
+        if getattr(pet, 'batteryLevel', 100) <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Pet's battery is depleted. Reset your pet to continue."
+            )
         
-        # Update this specific pet
-        updated_pet = await PetDB.play_with_pet(pet_id)
+        # Play with the pet
+        updated_pet = await PetDB.play_with_pet(str(pet.id))
         
         if not updated_pet:
-            print(f"Failed to update pet: {pet_id}")
-            raise HTTPException(status_code=500, detail="Failed to update pet")
+            print(f"[API] Pet not found after update: {pet.id}")
+            raise HTTPException(status_code=404, detail="Pet not found after update")
         
         # Ensure the pet has both id and _id for frontend compatibility
         updated_pet_dict = updated_pet.model_dump()
         if '_id' in updated_pet_dict and not updated_pet_dict.get('id'):
             updated_pet_dict['id'] = updated_pet_dict['_id']
         
-        print(f"Play interaction successful. Updated pet ID: {updated_pet_dict.get('id')}")
+        print(f"[API] Play interaction successful. Updated pet ID: {updated_pet_dict.get('id') or updated_pet_dict.get('_id')}")
         return updated_pet_dict
     except Exception as e:
-        print(f"Error in play_with_pet_by_user: {str(e)}")
+        print(f"[API] Error in play_with_pet_by_user: {str(e)}")
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail=f"Failed to play with pet: {str(e)}"
         )
 
 @router.post("/teach-pet")
@@ -427,51 +439,57 @@ class TeachPetByUserRequest(BaseModel):
 
 @router.post("/teach-pet-by-user")
 async def teach_pet_by_user(request: TeachPetByUserRequest, current_user: User = Depends(get_current_user)):
-    """Teach the user's first pet, fetching it directly from user's pets"""
+    """Teach the pet without requiring pet_id - automatically fetches user's pet"""
     try:
-        message = request.message
-        print(f"Received teach-pet-by-user request for user: {current_user.id}, message: {message}")
+        print(f"[API] Teach pet by user request for user ID: {current_user.id}, message: {request.message}")
         
-        if not message or message.strip() == "":
+        # Get the user's pet
+        pets = await PetDB.get_pets_by_user(current_user.id)
+        if not pets:
+            print(f"[API] No pets found for user: {current_user.id}")
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Message is required for 'teach' interactions"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No pets found for user"
             )
-        
-        # Get all of the user's pets
-        pets = await PetDB.get_pets_by_user(str(current_user.id))
-        
-        if not pets or len(pets) == 0:
-            print(f"No pets found for user: {current_user.id}")
-            raise HTTPException(status_code=404, detail="No pets found for user")
         
         # Use the first pet (users currently only have one pet)
         pet = pets[0]
-        pet_id = str(pet.id)
         
-        print(f"Found pet with ID: {pet_id}, Name: {pet.name}, User: {pet.userId}")
+        # Check if pet's battery is depleted
+        if getattr(pet, 'batteryLevel', 100) <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Pet's battery is depleted. Reset your pet to continue."
+            )
         
-        # Update this specific pet
-        updated_pet = await PetDB.teach_pet(pet_id, message)
+        # Validate the message
+        if not request.message or len(request.message.strip()) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Message is required for teaching"
+            )
+            
+        # Teach the pet
+        updated_pet = await PetDB.teach_pet(str(pet.id), request.message)
         
         if not updated_pet:
-            print(f"Failed to update pet: {pet_id}")
-            raise HTTPException(status_code=500, detail="Failed to update pet")
+            print(f"[API] Pet not found after update: {pet.id}")
+            raise HTTPException(status_code=404, detail="Pet not found after update")
         
         # Ensure the pet has both id and _id for frontend compatibility
         updated_pet_dict = updated_pet.model_dump()
         if '_id' in updated_pet_dict and not updated_pet_dict.get('id'):
             updated_pet_dict['id'] = updated_pet_dict['_id']
         
-        print(f"Teach interaction successful. Updated pet ID: {updated_pet_dict.get('id')}")
+        print(f"[API] Teach interaction successful. Updated pet ID: {updated_pet_dict.get('id') or updated_pet_dict.get('_id')}")
         return updated_pet_dict
     except Exception as e:
-        print(f"Error in teach_pet_by_user: {str(e)}")
+        print(f"[API] Error in teach_pet_by_user: {str(e)}")
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail=f"Failed to teach pet: {str(e)}"
         )
 
 @router.post("/save-pet", response_model=Pet)
@@ -498,66 +516,108 @@ async def save_pet(pet_data: dict, current_user: User = Depends(get_current_user
 
 @router.post("/chat")
 async def chat_with_pet(chat_request: ChatRequest, current_user: User = Depends(get_current_user)):
-    """Handle chat with pet using AI personality"""
+    """Chat with a pet and get a response based on its personality"""
     try:
-        print(f"[CHAT] Received chat request from user {current_user.id} for pet {chat_request.pet_id}")
+        print(f"[API] Chat request for pet: {chat_request.pet_id}, message: {chat_request.message}")
         
-        # First, try to get the pet by the provided ID
-        pet = None
-        try:
-            pet = await PetDB.get_pet(chat_request.pet_id)
-            if pet and pet.userId == str(current_user.id):
-                print(f"[CHAT] Found pet with provided ID: {pet.id}, belongs to user {pet.userId}")
+        # If pet_id isn't provided correctly, try to get the user's pet
+        if not chat_request.pet_id or chat_request.pet_id == 'null' or chat_request.pet_id == 'undefined':
+            print(f"[API] No pet_id provided or invalid pet_id, getting user's pet")
+            pets = await PetDB.get_pets_by_user(current_user.id)
+            if pets:
+                chat_request.pet_id = str(pets[0].id)
+                print(f"[API] Using pet ID from user's pets: {chat_request.pet_id}")
             else:
-                print(f"[CHAT] Pet not found or doesn't belong to user: {chat_request.pet_id}")
-                pet = None
-        except Exception as pet_err:
-            print(f"[CHAT] Error finding pet with ID {chat_request.pet_id}: {str(pet_err)}")
-            pet = None
+                # If no pet found, create a new one
+                print(f"[API] No pets found for user, creating a default pet")
+                pet_data = {
+                    "name": "Berny",
+                    "species": "Digital",
+                    "mood": "happy",
+                    "level": 1,
+                    "sassLevel": 1,
+                    "batteryLevel": 100,
+                    "userId": str(current_user.id),
+                    "lastFed": datetime.now(timezone.utc),
+                    "lastInteraction": datetime.now(timezone.utc),
+                    "interactionCount": 0,
+                    "memoryLog": []
+                }
+                new_pet = await PetDB.create_pet(pet_data)
+                if new_pet:
+                    chat_request.pet_id = str(new_pet.id)
+                    print(f"[API] Created new pet with ID: {chat_request.pet_id}")
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to create pet"
+                    )
         
-        # If pet not found or doesn't belong to user, try to find user's pets
+        # Get the pet - this might still fail if the ID exists but is invalid
+        pet = await PetDB.get_pet(chat_request.pet_id)
+        
+        # If the pet is still not found, try one more strategy - get the first pet for this user
         if not pet:
-            print(f"[CHAT] Looking for alternative pets for user {current_user.id}")
-            
-            # Get all pets for this user
-            try:
-                user_pets = await PetDB.get_pets_by_user(current_user.id)
-                
-                if not user_pets:
-                    print(f"[CHAT] No pets found for user {current_user.id}")
-                    raise HTTPException(status_code=404, detail="No pets found for this user")
-                
-                # Use the first pet (same as fixed-pet endpoint)
-                pet = user_pets[0]
-                print(f"[CHAT] Using alternative pet with ID: {pet.id}")
-            except Exception as user_pet_err:
-                print(f"[CHAT] Error finding user's pets: {str(user_pet_err)}")
-                raise HTTPException(status_code=404, detail="Could not find any pets for this user")
+            print(f"[API] Pet not found with ID: {chat_request.pet_id}, trying to find any pet for this user")
+            pets = await PetDB.get_pets_by_user(current_user.id)
+            if pets:
+                pet = pets[0]
+                chat_request.pet_id = str(pet.id)
+                print(f"[API] Using alternative pet with ID: {chat_request.pet_id}")
+            else:
+                print(f"[API] No pets found for user {current_user.id}")
+                raise HTTPException(status_code=404, detail="Pet not found")
         
-        # Calculate sass level based on pet's level and existing sass_level
-        sass_level = pet.sassLevel
-
-        # Get AI response based on pet's state and user message
-        response = get_chronopal_response(
-            user_message=chat_request.message,
-            pet_mood=pet.mood,
-            pet_level=pet.level,
-            sass_level=sass_level
-        )
-
-        # Add the interaction to pet's memory and increment interaction count
-        await PetDB.add_memory(pet.id, f"User: {chat_request.message}")
-        await PetDB.add_memory(pet.id, f"Pet: {response}")
-        await PetDB.increment_interaction(pet.id)
-
+        # Check if pet's battery is depleted
+        if getattr(pet, 'batteryLevel', 100) <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Pet's battery is depleted. Reset your pet to continue."
+            )
+        
+        # Check if the user owns this pet
+        if pet.userId != str(current_user.id):
+            print(f"[API] Authentication error: User {current_user.id} tried to chat with pet {pet.id} belonging to {pet.userId}")
+            
+            # If user doesn't own this pet, try to get their actual pet
+            print(f"[API] Attempting to find the correct pet for user {current_user.id}")
+            pets = await PetDB.get_pets_by_user(current_user.id)
+            if pets:
+                pet = pets[0]
+                chat_request.pet_id = str(pet.id)
+                print(f"[API] Found correct pet with ID: {chat_request.pet_id}")
+            else:
+                raise HTTPException(status_code=403, detail="Not authorized to chat with this pet")
+        
+        # Remove any empty message
+        if not chat_request.message or len(chat_request.message.strip()) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Message is required for chat"
+            )
+            
+        # Calculate response and tone based on pet's attributes
+        response = await get_chronopal_response(chat_request.message, pet)
+        
+        # Increment interaction count for the pet
+        await PetDB.increment_interaction(chat_request.pet_id)
+        
+        # Deplete battery by 3% for chatting
+        await PetDB.update_battery_level(chat_request.pet_id, -3)
+        
+        # Add the conversation to the pet's memory
+        memory_entry = f"User said: '{chat_request.message}', I replied: '{response}'"
+        await PetDB.add_memory(chat_request.pet_id, memory_entry)
+        
+        print(f"[API] Chat response generated successfully: {response[:50]}...")
         return {"response": response}
     except Exception as e:
-        print(f"[CHAT ERROR] {str(e)}")
+        print(f"[API] Error in chat_with_pet: {str(e)}")
         if isinstance(e, HTTPException):
             raise e
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
+            detail=f"Failed to chat with pet: {str(e)}"
         )
 
 @router.post("/debug-interaction")
@@ -676,4 +736,68 @@ async def get_fixed_pet(current_user: User = Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get fixed pet: {str(e)}"
+        )
+
+@router.post("/reset-pet", response_model=Pet)
+async def reset_pet(current_user: User = Depends(get_current_user)):
+    """Reset a pet by creating a new one when battery is depleted"""
+    try:
+        print(f"[API] Reset pet request for user ID: {current_user.id}")
+        
+        # Get the user's pet
+        pets = await PetDB.get_pets_by_user(current_user.id)
+        
+        # If the user has a pet, check if it's eligible for reset (battery depleted)
+        if pets:
+            pet = pets[0]
+            battery_level = getattr(pet, 'batteryLevel', 0)
+            
+            # Only allow reset if battery is depleted or very low
+            if battery_level > 10:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Pet's battery is not depleted. Reset is only allowed for depleted pets."
+                )
+                
+            # Delete the old pet
+            await PetDB.delete_pet(str(pet.id))
+        
+        # Create a new pet for the user
+        new_pet_data = {
+            "name": "Berny", # Default name, can be customized later
+            "species": "Digital",
+            "mood": MOOD_LEVELS["HAPPY"],
+            "level": 1,
+            "sassLevel": SASS_LEVELS["SWEET"],
+            "batteryLevel": 100,
+            "userId": str(current_user.id),
+            "lastFed": datetime.now(timezone.utc),
+            "lastInteraction": datetime.now(timezone.utc),
+            "interactionCount": 0,
+            "memoryLog": ["I was just created! Hello world!"]
+        }
+        
+        # Create the new pet
+        new_pet = await PetDB.create_pet(new_pet_data)
+        
+        if not new_pet:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create new pet"
+            )
+            
+        # Ensure the pet has both id and _id for frontend compatibility
+        new_pet_dict = new_pet.model_dump()
+        if '_id' in new_pet_dict and not new_pet_dict.get('id'):
+            new_pet_dict['id'] = new_pet_dict['_id']
+        
+        print(f"[API] Reset successful. Created new pet ID: {new_pet_dict.get('id') or new_pet_dict.get('_id')}")
+        return new_pet_dict
+    except Exception as e:
+        print(f"[API] Error in reset_pet: {str(e)}")
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to reset pet: {str(e)}"
         ) 

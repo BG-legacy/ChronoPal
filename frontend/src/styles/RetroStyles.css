@@ -36,6 +36,9 @@ body {
   text-align: center;
   position: relative;
   box-sizing: border-box;
+  background-color: #000000;
+  background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23333333' fill-opacity='0.1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='1'/%3E%3Ccircle cx='13' cy='13' r='1'/%3E%3C/g%3E%3C/svg%3E");
+  background-attachment: fixed;
 }
 
 /* Make sure the container fills the entire viewport */
@@ -90,14 +93,12 @@ body {
 
 /* Content Panels */
 .retro-panel {
-  background: #000000;
-  border: 2px ridge #3a5f94;
+  background: #000;
+  border: 0;
   border-radius: 0;
-  padding: 15px;
-  margin-bottom: 15px;
-  box-shadow: 
-    inset 0 0 50px #000,
-    0 0 15px #000;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
   position: relative;
 }
 
@@ -196,12 +197,29 @@ body {
   background: #000;
   color: #0f0;
   font-family: "VT323", "Courier New", monospace;
-  padding: 5px 10px;
-  border: 2px inset #0f0;
+  padding: 8px;
+  border: 2px ridge #0f0;
   display: inline-block;
-  margin: 10px 0;
-  text-shadow: 0 0 5px #0f0;
+  margin: 10px auto;
   letter-spacing: 2px;
+  text-align: center;
+  box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.5);
+  animation: counter-pulse 4s infinite;
+  width: 90%;
+}
+
+.retro-counter::before {
+  content: "Hit Counter";
+  display: block;
+  font-size: 10px;
+  margin-bottom: 5px;
+  color: #ff00ff;
+  text-transform: uppercase;
+}
+
+@keyframes counter-pulse {
+  0%, 100% { box-shadow: inset 0 0 5px rgba(0, 255, 0, 0.5); }
+  50% { box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.8); }
 }
 
 /* Main Button */
@@ -230,22 +248,34 @@ body {
   color: #ff0;
 }
 
-/* Marquee */
+/* Enhanced marquee */
 .retro-marquee {
   background: #000;
   color: #ff0;
   padding: 5px;
-  white-space: nowrap;
-  overflow: hidden;
+  font-family: "Comic Sans MS", cursive;
   border: 2px inset #666;
   margin: 10px 0;
-  font-family: "Comic Sans MS", cursive;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
 }
 
-.retro-marquee span {
+.marquee-content {
   display: inline-block;
-  animation: marquee 15s linear infinite;
+  white-space: nowrap;
+  animation: marquee-scroll 20s linear infinite;
   padding-right: 50px;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* Marquee style from removed marquee tag */
+marquee.retro-marquee {
+  display: none;
 }
 
 /* Table Layout */
@@ -304,7 +334,45 @@ body {
   display: flex;
   justify-content: space-between;
   color: #ffff00;
-  padding: 2px 0;
+  padding: 5px 0;
+  border-bottom: 1px dashed #0066ff;
+}
+
+.player-row:last-child {
+  border-bottom: none;
+}
+
+.player-row span:first-child {
+  font-weight: bold;
+  color: #00ffff;
+}
+
+.player-row span:last-child {
+  color: #ff00ff;
+  text-shadow: 0 0 2px #ff00ff;
+  font-family: "Courier New", monospace;
+  padding: 0 5px;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* For timestamp values specifically */
+.player-row:nth-last-child(1) span:last-child,
+.player-row:nth-last-child(2) span:last-child {
+  color: #00ff00;
+  text-shadow: 0 0 3px #00ff00;
+  background: #000000;
+  border: 1px solid #00ff00;
+  font-size: 0.95em;
+  padding: 2px 5px;
+  letter-spacing: 1px;
+  animation: pulse-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% { text-shadow: 0 0 3px #00ff00; }
+  50% { text-shadow: 0 0 8px #00ff00; }
+  100% { text-shadow: 0 0 3px #00ff00; }
 }
 
 /* Hit Counter */
@@ -312,11 +380,29 @@ body {
   background: #000;
   color: #0f0;
   font-family: "VT323", "Courier New", monospace;
-  padding: 5px;
-  border: 1px solid #0f0;
+  padding: 8px;
+  border: 2px ridge #0f0;
   display: inline-block;
   margin: 10px auto;
   letter-spacing: 2px;
+  text-align: center;
+  box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.5);
+  animation: counter-pulse 4s infinite;
+  width: 90%;
+}
+
+.hit-counter::before {
+  content: "Hit Counter";
+  display: block;
+  font-size: 10px;
+  margin-bottom: 5px;
+  color: #ff00ff;
+  text-transform: uppercase;
+}
+
+@keyframes counter-pulse {
+  0%, 100% { box-shadow: inset 0 0 5px rgba(0, 255, 0, 0.5); }
+  50% { box-shadow: inset 0 0 15px rgba(0, 255, 0, 0.8); }
 }
 
 /* Web Ring */
@@ -416,6 +502,12 @@ body {
   height: 100px;
   background: url("data:image/gif;base64,R0lGODlhGAAYAPQAAP///wAAAP///wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACH5BAEAAAAALAAAAAAYABgAAAVgICAAAAICRISEhISEhISEeHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4KCgpGQA7") no-repeat;
   image-rendering: pixelated;
+  animation: rotate-construction 20s linear infinite;
+}
+
+@keyframes rotate-construction {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Guestbook Button */
@@ -481,4 +573,1322 @@ body {
   opacity: 0.7;
   cursor: not-allowed;
   background: linear-gradient(to bottom, #666, #333);
+}
+
+/* Image Placeholder */
+.retro-image-placeholder {
+  background: #000;
+  border: 0;
+  border-radius: 0;
+  padding: 15px;
+  margin-top: 0;
+  margin-bottom: 0;
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+  width: 100%;
+  height: 100%;
+}
+
+.placeholder-content {
+  color: #0ff;
+  font-family: "Courier New", monospace;
+  font-size: 16px;
+  text-shadow: 0 0 5px #0ff;
+  animation: blink 1.5s infinite;
+}
+
+/* Add clearfix for chat container layout */
+.chat-container:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Four Square Grid Layout */
+.four-square-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  border: 2px dotted #00ffff;
+  padding: 20px;
+  background: #000;
+  box-sizing: border-box;
+}
+
+.grid-square {
+  background: #000;
+  border: 0;
+  padding: 10px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-square-top-left {
+  grid-area: 1 / 1 / 2 / 2;
+}
+
+.grid-square-top-right {
+  grid-area: 1 / 2 / 2 / 3;
+}
+
+.grid-square-bottom-left {
+  grid-area: 2 / 1 / 3 / 2;
+}
+
+.grid-square-bottom-right {
+  grid-area: 2 / 2 / 3 / 3;
+}
+
+.pet-image-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border: 0;
+}
+
+.pet-name {
+  color: #ff0;
+  font-size: 24px;
+  font-weight: bold;
+  margin-top: 10px;
+  text-shadow: 0 0 5px #f00;
+  text-transform: uppercase;
+}
+
+.pet-image {
+  background: #000;
+  border: 0;
+  border-radius: 0;
+  padding: 15px;
+  width: 80%;
+  height: 70%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+}
+
+.pet-stats {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-section {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  border: 1px solid #0ff;
+  padding: 10px;
+  background: #000;
+  min-height: 150px;
+}
+
+.chat-message {
+  margin-bottom: 8px;
+  padding: 5px;
+}
+
+.chat-message.user {
+  color: #0ff;
+  text-align: right;
+}
+
+.chat-message.ai {
+  color: #ff0;
+  text-align: left;
+}
+
+.message-time {
+  display: block;
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+}
+
+.chat-input {
+  display: flex;
+  gap: 5px;
+}
+
+.chat-input .retro-input {
+  flex: 1;
+}
+
+/* Pixelated cat pet styling similar to reference image */
+.pet-screen {
+  background: #000000;
+  border: 2px solid #ff00ff;
+  border-radius: 0;
+  padding: 15px;
+  box-shadow: 0 0 10px #ff00ff;
+  width: 180px;
+  height: 180px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+
+/* Remove outer dotted border in the container */
+.pet-image-container {
+  border: 0;
+}
+
+.pet-image {
+  border: 0;
+  box-shadow: none;
+}
+
+/* Grid pattern background to emphasize pixels */
+.pet-screen::before {
+  display: none; /* Hide the line completely */
+}
+
+/* Remove the scanline effect */
+.pet-screen::after {
+  display: none;
+}
+
+/* Simplify the clock styling */
+.pet-clock {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  color: #fff;
+  background: #000;
+  padding: 4px 8px;
+  border: 1px solid #ff00ff;
+  border-radius: 3px;
+  box-shadow: 0 0 5px #ff00ff;
+  z-index: 10;
+  text-align: center;
+  min-width: 60px;
+  letter-spacing: 1px;
+}
+
+/* Simplified battery indicator at the bottom */
+.battery-indicator {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 30px;
+  height: 8px;
+  background: #333;
+  border: 1px solid #666;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.battery-level {
+  height: 100%;
+  background: #ff00ff;
+  width: 60%;
+  transition: width 0.5s ease;
+}
+
+/* Battery level color states */
+.battery-level.battery-full {
+  background: #00ff00;
+  box-shadow: 0 0 5px #00ff00;
+}
+
+.battery-level.battery-medium {
+  background: #ffff00;
+  box-shadow: 0 0 5px #ffff00;
+}
+
+.battery-level.battery-low {
+  background: #ff9900;
+  box-shadow: 0 0 5px #ff9900;
+  animation: battery-pulse 1s infinite;
+}
+
+.battery-level.battery-critical {
+  background: #ff0000;
+  box-shadow: 0 0 5px #ff0000;
+  animation: battery-pulse 0.5s infinite;
+}
+
+.battery-level.battery-empty {
+  width: 0;
+  animation: none;
+}
+
+@keyframes battery-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Remove any remaining borders/outlines from the pet display */
+.pet-image-placeholder.pet-placeholder {
+  border: 0;
+  box-shadow: none;
+}
+
+.retro-panel {
+  border: 0;
+  box-shadow: none;
+}
+
+/* Low battery styling for pet */
+.tamagotchi-pet.low-battery .tamagotchi-head,
+.tamagotchi-pet.low-battery .tamagotchi-head::before,
+.tamagotchi-pet.low-battery .tamagotchi-head::after,
+.tamagotchi-pet.low-battery .tamagotchi-limb,
+.tamagotchi-pet.low-battery .tamagotchi-body::after {
+  background: #ff9900; /* Orange-ish color for low battery */
+}
+
+.tamagotchi-pet.low-battery .tamagotchi-eye {
+  animation: worried-blink 1.5s steps(2) infinite;
+}
+
+@keyframes worried-blink {
+  0%, 85%, 100% { height: 6px; width: 6px; }
+  25%, 65% { height: 3px; width: 8px; }
+}
+
+.tamagotchi-pet.low-battery .tamagotchi-mouth {
+  transform: translateX(-50%) rotate(180deg);
+  height: 4px;
+  width: 10px;
+  border-radius: 50% 50% 0 0;
+}
+
+/* Critical battery styling */
+.tamagotchi-pet.critical-battery .tamagotchi-head,
+.tamagotchi-pet.critical-battery .tamagotchi-head::before,
+.tamagotchi-pet.critical-battery .tamagotchi-head::after,
+.tamagotchi-pet.critical-battery .tamagotchi-limb,
+.tamagotchi-pet.critical-battery .tamagotchi-body::after {
+  background: #ff0000; /* Red for critical battery */
+}
+
+.tamagotchi-pet.critical-battery .tamagotchi-eye {
+  animation: angry-blink 0.8s steps(2) infinite;
+}
+
+@keyframes angry-blink {
+  0%, 100% { 
+    height: 8px; 
+    width: 8px; 
+    background-color: #ff0000;
+  }
+  50% { 
+    height: 2px; 
+    width: 10px; 
+    background-color: #000;
+  }
+}
+
+.tamagotchi-pet.critical-battery .tamagotchi-mouth {
+  transform: translateX(-50%);
+  height: 4px;
+  width: 14px;
+  border-radius: 0;
+}
+
+.tamagotchi-pet.critical-battery .tamagotchi-body {
+  animation: shake 0.5s infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translate(-50%, -50%) rotate(0deg); }
+  25% { transform: translate(-52%, -50%) rotate(-3deg); }
+  75% { transform: translate(-48%, -50%) rotate(3deg); }
+}
+
+/* Dead state styling */
+.tamagotchi-pet.dead .tamagotchi-head,
+.tamagotchi-pet.dead .tamagotchi-head::before,
+.tamagotchi-pet.dead .tamagotchi-head::after,
+.tamagotchi-pet.dead .tamagotchi-limb,
+.tamagotchi-pet.dead .tamagotchi-body::after {
+  background: #666666; /* Gray for dead pet */
+}
+
+.tamagotchi-pet.dead .tamagotchi-eye {
+  animation: none;
+  height: 2px;
+  width: 8px;
+  background-color: #000;
+}
+
+.tamagotchi-pet.dead .tamagotchi-eye.left {
+  transform: rotate(45deg);
+  left: 10px;
+}
+
+.tamagotchi-pet.dead .tamagotchi-eye.right {
+  transform: rotate(-45deg);
+  right: 10px;
+}
+
+.tamagotchi-pet.dead .tamagotchi-mouth {
+  animation: none;
+  transform: translateX(-50%);
+  height: 2px;
+  width: 8px;
+}
+
+.tamagotchi-pet.dead .tamagotchi-body {
+  animation: none;
+  transform: translate(-50%, -50%) rotate(90deg); /* Fallen over */
+}
+
+/* Style for the status text */
+.player-row span.battery-critical {
+  color: #ff0000;
+  animation: flash-text 0.5s infinite;
+}
+
+.player-row span.battery-low {
+  color: #ff9900;
+}
+
+.player-row span.battery-medium {
+  color: #ffff00;
+}
+
+.player-row span.battery-full {
+  color: #00ff00;
+}
+
+.player-row span.battery-empty {
+  color: #ff0000;
+  text-decoration: line-through;
+}
+
+@keyframes flash-text {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Reset button styling */
+.revival-button {
+  animation: glow-button 2s infinite;
+}
+
+@keyframes glow-button {
+  0%, 100% { box-shadow: 0 0 5px #00ff00; }
+  50% { box-shadow: 0 0 15px #00ff00; }
+}
+
+/* Death message styling */
+.death-message {
+  animation: blink 1s infinite;
+}
+
+/* Pixelated 8-bit cat with blockier edges */
+.tamagotchi-pet {
+  width: 120px;
+  height: 120px;
+  background: transparent;
+  position: relative;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.tamagotchi-body {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+  background: transparent;
+  overflow: visible;
+}
+
+/* Blockier cat head - more square like reference */
+.tamagotchi-head {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 32px;
+  background-color: #9DE1E2; /* Light cyan to match reference */
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+/* Pixel art cat ears */
+.tamagotchi-head::before,
+.tamagotchi-head::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background-color: #9DE1E2; /* Match head color */
+  border: 0;
+  z-index: -1;
+  top: -12px;
+  border-radius: 0;
+}
+
+.tamagotchi-head::before {
+  left: 0;
+}
+
+.tamagotchi-head::after {
+  right: 0;
+}
+
+/* Pixel art eyes - black squares */
+.tamagotchi-eye {
+  position: absolute;
+  top: 12px;
+  width: 6px;
+  height: 6px;
+  background-color: #000;
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+.tamagotchi-eye.left {
+  left: 12px;
+}
+
+.tamagotchi-eye.right {
+  right: 12px;
+}
+
+/* Simplified pixel mouth - just a line */
+.tamagotchi-mouth {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 2px;
+  background-color: #000;
+  border: 0;
+  border-radius: 0;
+}
+
+/* Pixel art limbs - simple squares */
+.tamagotchi-limb {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #9DE1E2; /* Match head color */
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.tamagotchi-arm.left {
+  top: 38px;
+  left: 0;
+}
+
+.tamagotchi-arm.right {
+  top: 38px;
+  right: 0;
+}
+
+.tamagotchi-leg.left {
+  bottom: 0;
+  left: 8px;
+}
+
+.tamagotchi-leg.right {
+  bottom: 0;
+  right: 8px;
+}
+
+/* Pixel art tail - simplified */
+.tamagotchi-body::after {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 6px;
+  background-color: #9DE1E2; /* Match head color */
+  border: 0;
+  border-radius: 0;
+  bottom: 12px;
+  right: -12px;
+}
+
+/* Species colors - match reference image color scheme */
+.tamagotchi-pet[data-species="Digital"] .tamagotchi-head,
+.tamagotchi-pet[data-species="Digital"] .tamagotchi-head::before,
+.tamagotchi-pet[data-species="Digital"] .tamagotchi-head::after,
+.tamagotchi-pet[data-species="Digital"] .tamagotchi-limb,
+.tamagotchi-pet[data-species="Digital"] .tamagotchi-body::after {
+  background: #9DE1E2; /* Light cyan like the reference */
+}
+
+/* Simple pixel bounce animation */
+@keyframes pixel-bounce {
+  0%, 100% { transform: translate(-50%, -50%); }
+  50% { transform: translate(-50%, -54%); }
+}
+
+/* Blink animation with steps to make it look pixelated */
+@keyframes pixel-blink {
+  0%, 90%, 100% { height: 6px; }
+  91%, 99% { height: 1px; }
+}
+
+/* Apply basic animations */
+.tamagotchi-body {
+  animation: pixel-bounce 1.5s steps(2) infinite;
+}
+
+.tamagotchi-eye {
+  animation: pixel-blink 2.5s steps(1) infinite;
+}
+
+/* Animation for the screen scanline effect */
+@keyframes scanline {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(180px); }
+}
+
+/* Add scanline effect */
+.pet-screen::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 0, 255, 0.1);
+  animation: scanline 2s linear infinite;
+  pointer-events: none;
+  z-index: 9;
+}
+
+/* Status text styling */
+.pet-image-container .pet-name {
+  color: #ff00ff;
+  font-size: 16px;
+  font-weight: bold;
+  margin-top: 10px;
+  text-shadow: 1px 1px 0 #000;
+  font-family: "Courier New", monospace;
+  text-transform: uppercase;
+}
+
+.pet-image-container div {
+  color: #00ffff;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Feeding Animation */
+@keyframes pixel-eat {
+  0%, 100% { 
+    height: 3px; 
+    width: 8px; 
+  }
+  33% { 
+    height: 6px; 
+    width: 10px; 
+    background-color: #ff00ff; /* Food appearing */
+  }
+  66% { 
+    height: 8px; 
+    width: 6px; 
+    background-color: #ff00ff; /* Food being eaten */
+  }
+}
+
+/* Food particles animation */
+@keyframes food-appear {
+  0%, 100% { 
+    opacity: 0; 
+    transform: translateY(0); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: translateY(-5px); 
+  }
+}
+
+/* Create food particles when feeding */
+.tamagotchi-pet.feeding::before {
+  content: "";
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background-color: #ff00ff;
+  left: 50%;
+  top: 65%;
+  transform: translate(-50%, -50%);
+  animation: food-appear 0.5s steps(2) infinite;
+  z-index: 2;
+}
+
+/* Add second food particle */
+.tamagotchi-pet.feeding::after {
+  content: "";
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background-color: #00ffff;
+  left: 45%;
+  top: 60%;
+  transform: translate(-50%, -50%);
+  animation: food-appear 0.5s steps(2) infinite 0.25s;
+  z-index: 2;
+}
+
+/* Apply feeding animation to mouth */
+.tamagotchi-pet.feeding .tamagotchi-mouth {
+  animation: pixel-eat 0.5s steps(2) infinite;
+}
+
+/* Adjust head animation during feeding */
+.tamagotchi-pet.feeding .tamagotchi-head {
+  animation: feeding-bob 0.5s steps(2) infinite;
+}
+
+@keyframes feeding-bob {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(2px); }
+}
+
+/* Food particles container */
+.food-particles {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Additional food particles for a more visible effect */
+.food-particles::before, 
+.food-particles::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: #ff00ff;
+  animation: food-float 1s steps(3) infinite;
+}
+
+.food-particles::before {
+  top: 50%;
+  left: 30%;
+}
+
+.food-particles::after {
+  top: 55%;
+  left: 60%;
+  background-color: #00ffff;
+  animation-delay: 0.3s;
+}
+
+@keyframes food-float {
+  0% { 
+    transform: translate(0, 0); 
+    opacity: 0;
+  }
+  25% { 
+    transform: translate(-2px, -4px); 
+    opacity: 1;
+  }
+  50% { 
+    transform: translate(0px, -8px); 
+    opacity: 1;
+  }
+  75% { 
+    transform: translate(2px, -12px); 
+    opacity: 0.7;
+  }
+  100% { 
+    transform: translate(0, -16px); 
+    opacity: 0;
+  }
+}
+
+/* Make mouth animation more dramatic during feeding */
+.tamagotchi-pet.feeding .tamagotchi-mouth {
+  animation: eat-food 0.5s steps(2) infinite;
+}
+
+@keyframes eat-food {
+  0%, 100% { 
+    height: 2px; 
+    width: 10px; 
+    background-color: #000;
+  }
+  50% { 
+    height: 8px; 
+    width: 8px; 
+    background-color: #ff00ff; /* Food color in mouth */
+  }
+}
+
+/* Playing Animation */
+@keyframes play-bounce {
+  0%, 100% { 
+    transform: translate(-50%, -50%); 
+  }
+  25% { 
+    transform: translate(-50%, -55%) rotate(-5deg); 
+  }
+  50% { 
+    transform: translate(-50%, -50%); 
+  }
+  75% { 
+    transform: translate(-50%, -55%) rotate(5deg); 
+  }
+}
+
+@keyframes play-jump {
+  0%, 100% { 
+    transform: translateY(0); 
+  }
+  50% { 
+    transform: translateY(-6px); 
+  }
+}
+
+/* Create toy animation - the ball */
+@keyframes toy-bounce {
+  0%, 100% { 
+    transform: translate(0, 0) rotate(0deg); 
+  }
+  25% { 
+    transform: translate(-6px, -10px) rotate(-45deg); 
+  }
+  50% { 
+    transform: translate(0, -15px) rotate(0deg); 
+  }
+  75% { 
+    transform: translate(6px, -10px) rotate(45deg); 
+  }
+}
+
+/* Play toy element */
+.play-toy {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background-color: #ff00ff;
+  border-radius: 0;
+  top: 50%;
+  left: 30%;
+  animation: toy-bounce 0.8s steps(4) infinite;
+  z-index: 3;
+}
+
+/* Second play toy */
+.play-toy::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background-color: #00ffff;
+  top: -10px;
+  left: 15px;
+  animation: toy-bounce 0.8s steps(4) infinite 0.4s;
+}
+
+/* Stars/sparkles that appear when playing */
+.play-stars {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.play-stars::before,
+.play-stars::after {
+  content: "+";
+  position: absolute;
+  color: #ff00ff;
+  font-size: 12px;
+  font-weight: bold;
+  animation: star-twinkle 0.6s steps(2) infinite;
+}
+
+.play-stars::before {
+  top: 30%;
+  right: 30%;
+}
+
+.play-stars::after {
+  top: 20%;
+  left: 20%;
+  color: #00ffff;
+  animation-delay: 0.3s;
+}
+
+@keyframes star-twinkle {
+  0%, 100% { 
+    opacity: 0; 
+    transform: scale(0.8); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: scale(1.2); 
+  }
+}
+
+/* Playing animation for the whole pet */
+.tamagotchi-pet.playing .tamagotchi-body {
+  animation: play-bounce 0.8s steps(4) infinite;
+}
+
+/* Make limbs move when playing */
+.tamagotchi-pet.playing .tamagotchi-limb {
+  animation: play-jump 0.4s steps(2) infinite;
+}
+
+/* Stagger limb animations */
+.tamagotchi-pet.playing .tamagotchi-arm.left {
+  animation-delay: 0.1s;
+}
+
+.tamagotchi-pet.playing .tamagotchi-arm.right {
+  animation-delay: 0.3s;
+}
+
+.tamagotchi-pet.playing .tamagotchi-leg.left {
+  animation-delay: 0.2s;
+}
+
+.tamagotchi-pet.playing .tamagotchi-leg.right {
+  animation-delay: 0s;
+}
+
+/* Make eyes blink faster during play */
+.tamagotchi-pet.playing .tamagotchi-eye {
+  animation: play-blink 0.4s steps(1) infinite;
+}
+
+@keyframes play-blink {
+  0%, 75% { height: 6px; }
+  25%, 50% { height: 1px; }
+}
+
+/* Teaching Animation */
+@keyframes learning-pulse {
+  0%, 100% { 
+    transform: scale(1); 
+  }
+  50% { 
+    transform: scale(1.1); 
+  }
+}
+
+@keyframes thinking {
+  0%, 100% { transform: translateX(-50%) rotate(0deg); }
+  25% { transform: translateX(-50%) rotate(-5deg); }
+  75% { transform: translateX(-50%) rotate(5deg); }
+}
+
+/* Learning symbols - question mark, exclamation, etc. */
+.learning-symbols {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.learning-symbols::before, 
+.learning-symbols::after {
+  position: absolute;
+  font-size: 12px;
+  font-weight: bold;
+  animation: float-up 1.5s steps(3) infinite;
+}
+
+.learning-symbols::before {
+  content: "?";
+  color: #ff00ff;
+  top: 20%;
+  right: 25%;
+  animation-delay: 0.2s;
+}
+
+.learning-symbols::after {
+  content: "!";
+  color: #00ffff;
+  top: 30%;
+  left: 25%;
+  animation-delay: 0.7s;
+}
+
+@keyframes float-up {
+  0% { 
+    transform: translateY(0); 
+    opacity: 0; 
+  }
+  25% { 
+    transform: translateY(-5px); 
+    opacity: 1; 
+  }
+  75% { 
+    transform: translateY(-10px); 
+    opacity: 1; 
+  }
+  100% { 
+    transform: translateY(-15px); 
+    opacity: 0; 
+  }
+}
+
+/* Make the head "think" during teaching */
+.tamagotchi-pet.teaching .tamagotchi-head {
+  animation: thinking 1s steps(2) infinite;
+}
+
+/* Make the eyes look curious during teaching */
+.tamagotchi-pet.teaching .tamagotchi-eye {
+  animation: curious-blink 0.8s steps(2) infinite;
+}
+
+@keyframes curious-blink {
+  0%, 10%, 90%, 100% { 
+    height: 6px; 
+    width: 6px; 
+  }
+  20%, 80% { 
+    height: 4px; 
+    width: 8px; 
+  }
+}
+
+/* Pulse effect for the whole pet while learning */
+.tamagotchi-pet.teaching {
+  animation: learning-pulse 1.5s ease-in-out infinite;
+}
+
+/* ADDED STYLES FOR ENHANCED 2000s RETRO LOOK */
+
+/* Popup styles */
+.retro-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.retro-popup-content {
+  background: linear-gradient(to bottom, #000066, #000033);
+  border: 5px solid #ff00ff;
+  padding: 20px;
+  text-align: center;
+  width: 300px;
+  color: #00ffff;
+  box-shadow: 0 0 20px #ff00ff;
+  animation: pulse-border 2s infinite;
+}
+
+.retro-popup-content h3 {
+  color: #ffff00;
+  font-size: 24px;
+  margin-bottom: 10px;
+  text-shadow: 2px 2px 4px #ff00ff;
+}
+
+.retro-popup-content button {
+  background: linear-gradient(to bottom, #ff0066, #cc0033);
+  border: 3px outset #ff0066;
+  color: #ffffff;
+  padding: 8px 20px;
+  margin-top: 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.retro-popup-content button:hover {
+  background: linear-gradient(to bottom, #ff3399, #ff0066);
+}
+
+@keyframes pulse-border {
+  0%, 100% { border-color: #ff00ff; }
+  50% { border-color: #00ffff; }
+}
+
+/* Banner collection */
+.retro-banner-collection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.retro-banner {
+  background: #000;
+  border: 1px solid #666;
+  padding: 5px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.award-banner {
+  margin: 20px 0;
+  text-align: center;
+  animation: rotate-award 5s infinite;
+}
+
+@keyframes rotate-award {
+  0%, 85%, 100% { transform: rotate(0deg); }
+  90% { transform: rotate(5deg); }
+  95% { transform: rotate(-5deg); }
+}
+
+/* Sparkle text */
+.sparkle-text {
+  color: #ff00ff;
+  font-size: 18px;
+  margin-bottom: 5px;
+  animation: color-cycle 3s infinite, sparkle 2s infinite;
+  text-shadow: 0 0 5px #ff00ff;
+}
+
+@keyframes color-cycle {
+  0% { color: #ff00ff; }
+  33% { color: #ffff00; }
+  66% { color: #00ffff; }
+  100% { color: #ff00ff; }
+}
+
+@keyframes sparkle {
+  0%, 100% { text-shadow: 0 0 5px #ff00ff; }
+  25% { text-shadow: 0 0 10px #ffff00; }
+  50% { text-shadow: 0 0 15px #00ffff; }
+  75% { text-shadow: 0 0 10px #ff00ff; }
+}
+
+/* Poll styling */
+.retro-poll {
+  background: #000;
+  border: 1px dashed #00ffff;
+  padding: 10px;
+  margin-top: 20px;
+}
+
+.poll-form {
+  padding: 10px;
+}
+
+.poll-option {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.poll-option input {
+  margin-right: 10px;
+}
+
+.poll-option label {
+  color: #ffffff;
+}
+
+.retro-poll-button {
+  background: linear-gradient(to bottom, #3366cc, #003399);
+  border: 2px outset #3366cc;
+  color: #ffffff;
+  padding: 5px 15px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.retro-poll-button:hover {
+  background: linear-gradient(to bottom, #3399ff, #3366cc);
+}
+
+/* Guestbook CTA */
+.guestbook-cta {
+  margin: 20px 0;
+  text-align: center;
+  border: 1px solid #ff00ff;
+  padding: 10px;
+  background: #000033;
+}
+
+.guestbook-title {
+  color: #ffff00;
+  font-weight: bold;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+/* Enhanced news updates */
+.updates-container {
+  position: relative;
+  padding: 5px;
+  border: 1px solid #003366;
+  background: rgba(0, 0, 51, 0.5);
+}
+
+.new-label {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ff0000;
+  color: #ffff00;
+  padding: 2px 5px;
+  font-size: 10px;
+  animation: blink 1s step-end infinite;
+  transform: rotate(5deg);
+  border: 1px solid #ffff00;
+}
+
+/* Page stats */
+.page-stats {
+  font-size: 10px;
+  margin-top: 5px;
+  color: #00ffff;
+}
+
+/* Cursor trail effect */
+.cursor-trail {
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+}
+
+.cursor-trail::before {
+  content: "✨";
+  position: absolute;
+  font-size: 20px;
+  opacity: 0;
+}
+
+@keyframes trail-fade {
+  0% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-20px); }
+}
+
+/* Retro nav button enhancements */
+.retro-nav-button {
+  background: linear-gradient(to bottom, #000066, #000033);
+  border: 2px outset #3366cc;
+  color: #ffffff;
+  padding: 5px 10px;
+  font-weight: bold;
+  cursor: pointer;
+  margin: 0 3px;
+  font-family: "Arial", sans-serif;
+}
+
+.retro-nav-button:hover {
+  background: linear-gradient(to bottom, #0066cc, #003399);
+  border-color: #0099ff;
+}
+
+.retro-nav-button.retro-blink {
+  background: linear-gradient(to bottom, #cc0000, #990000);
+  color: #ffff00;
+  border-color: #ff0000;
+}
+
+/* Enhanced retro-banner with hover effect */
+.retro-banner:hover {
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+}
+
+/* Extra animation for the sparkle text */
+@keyframes sparkle {
+  0%, 100% { text-shadow: 0 0 5px #ff00ff; }
+  25% { text-shadow: 0 0 10px #ffff00; }
+  50% { text-shadow: 0 0 15px #00ffff; }
+  75% { text-shadow: 0 0 10px #ff00ff; }
+}
+
+/* Add a background pattern for nostalgia */
+.retro-container {
+  background-color: #000000;
+  background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23333333' fill-opacity='0.1' fill-rule='evenodd'%3E%3Ccircle cx='3' cy='3' r='1'/%3E%3Ccircle cx='13' cy='13' r='1'/%3E%3C/g%3E%3C/svg%3E");
+  background-attachment: fixed;
+}
+
+/* Enhanced under construction corner */
+.under-construction {
+  animation: rotate-construction 20s linear infinite;
+}
+
+@keyframes rotate-construction {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Add classic 2000s-style scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+  background: #000;
+}
+
+::-webkit-scrollbar-track {
+  background: #000033;
+  border: 1px solid #3366cc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to right, #3366cc, #0066ff);
+  border: 1px outset #66ccff;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to right, #66ccff, #3399ff);
+}
+
+::-webkit-scrollbar-corner {
+  background: #000033;
 }

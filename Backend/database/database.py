@@ -305,42 +305,115 @@ class PetDB:
 
     @staticmethod
     async def check_neglect(pet_id: str) -> Optional[Pet]:
-        """Check if pet has been neglected and update state accordingly"""
-        pet = await PetDB.get_pet(pet_id)
-        if not pet:
+        """Check if the pet is being neglected and update its mood accordingly"""
+        try:
+            pet = await PetDB.get_pet(pet_id)
+            if not pet:
+                return None
+                
+            now = datetime.now(timezone.utc)
+            
+            # Calculate how long since the pet was last fed or interacted with
+            last_fed = pet.lastFed
+            last_interaction = pet.lastInteraction
+            
+            # Convert to UTC if they're not already
+            if last_fed.tzinfo is None:
+                last_fed = last_fed.replace(tzinfo=timezone.utc)
+            if last_interaction.tzinfo is None:
+                last_interaction = last_interaction.replace(tzinfo=timezone.utc)
+            
+            # Calculate hours since last interaction
+            hours_since_fed = (now - last_fed).total_seconds() / 3600
+            hours_since_interaction = (now - last_interaction).total_seconds() / 3600
+            
+            # Determine which was more recent, feeding or other interaction
+            hours_since_last_action = min(hours_since_fed, hours_since_interaction)
+            
+            # Determine new mood based on neglect time
+            new_mood = pet.mood  # Default to current mood
+            
+            if hours_since_last_action < NEGLECT_THRESHOLD_HOURS / 4:  # Less than 6 hours
+                new_mood = MOOD_LEVELS["HAPPY"]
+            elif hours_since_last_action < NEGLECT_THRESHOLD_HOURS / 2:  # Less than 12 hours
+                new_mood = MOOD_LEVELS["CONTENT"]
+            elif hours_since_last_action < NEGLECT_THRESHOLD_HOURS * 0.75:  # Less than 18 hours
+                new_mood = MOOD_LEVELS["NEUTRAL"]
+            elif hours_since_last_action < NEGLECT_THRESHOLD_HOURS:  # Less than 24 hours
+                new_mood = MOOD_LEVELS["GRUMPY"]
+            else:  # 24 hours or more
+                new_mood = MOOD_LEVELS["ANGRY"]
+            
+            # Calculate battery depletion based on neglect time
+            # Deplete battery by 1% per hour of neglect
+            hours_of_neglect = hours_since_last_action
+            battery_depletion = int(hours_of_neglect)
+            
+            # Ensure batteryLevel exists and is a number
+            current_battery = getattr(pet, 'batteryLevel', 100)
+            if current_battery is None:
+                current_battery = 100
+                
+            # Calculate new battery level (minimum 0)
+            new_battery_level = max(0, current_battery - battery_depletion)
+            
+            # Only update if there's a change in mood or battery
+            if new_mood != pet.mood or new_battery_level != current_battery:
+                update_data = {
+                    "mood": new_mood,
+                    "batteryLevel": new_battery_level
+                }
+                updated_pet = await PetDB.update_pet(pet_id, update_data)
+                return updated_pet
+            
+            return pet
+        except Exception as e:
+            print(f"Error checking neglect: {str(e)}")
             return None
-
-        now = datetime.now(timezone.utc)
-        # Ensure lastInteraction is timezone-aware
-        if pet.lastInteraction.tzinfo is None:
-            pet.lastInteraction = pet.lastInteraction.replace(tzinfo=timezone.utc)
-        
-        hours_since_interaction = (now - pet.lastInteraction).total_seconds() / 3600
-
-        if hours_since_interaction > NEGLECT_THRESHOLD_HOURS:
-            # Calculate how many neglect periods have passed
-            neglect_periods = int(hours_since_interaction / NEGLECT_THRESHOLD_HOURS)
             
-            # Calculate new sass level based on neglect periods
-            # For 3 or more neglect periods, increase by 2 levels
-            # For 1-2 neglect periods, increase by 1 level
-            sass_increase = 2 if neglect_periods >= 3 else 1
-            new_sass_level = min(pet.sassLevel + sass_increase, SASS_LEVELS["SAVAGE"])
+    @staticmethod
+    async def update_battery_level(pet_id: str, amount: int) -> Optional[Pet]:
+        """Update the pet's battery level, ensuring it stays between 0 and 100"""
+        try:
+            pet = await PetDB.get_pet(pet_id)
+            if not pet:
+                return None
+                
+            # Get current battery level, defaulting to 100 if not set
+            current_battery = getattr(pet, 'batteryLevel', 100)
+            if current_battery is None:
+                current_battery = 100
+                
+            # Calculate new battery level with bounds
+            new_battery_level = max(0, min(100, current_battery + amount))
             
-            # Update pet state based on neglect
-            updates = {
-                "mood": MOOD_LEVELS["GRUMPY"],
-                "sassLevel": new_sass_level,
-                "level": max(pet.level - neglect_periods, 1)
-            }
+            # Only update if there's a change
+            if new_battery_level != current_battery:
+                updated_pet = await PetDB.update_pet(pet_id, {"batteryLevel": new_battery_level})
+                return updated_pet
             
-            # Add a memory about being neglected
-            memory = f"Pet was neglected for {int(hours_since_interaction)} hours"
-            await PetDB.add_memory(pet_id, memory)
+            return pet
+        except Exception as e:
+            print(f"Error updating battery level: {str(e)}")
+            return None
             
-            return await PetDB.update_pet(pet_id, updates)
-        
-        return pet
+    @staticmethod
+    async def is_battery_depleted(pet_id: str) -> bool:
+        """Check if the pet's battery is depleted (0 or below)"""
+        try:
+            pet = await PetDB.get_pet(pet_id)
+            if not pet:
+                return False
+                
+            # Get battery level, defaulting to 100 if not set
+            battery_level = getattr(pet, 'batteryLevel', 100)
+            if battery_level is None:
+                battery_level = 100
+                
+            return battery_level <= 0
+        except Exception as e:
+            print(f"Error checking battery depletion: {str(e)}")
+            return False
 
     @staticmethod
     async def increment_interaction(pet_id: str) -> Optional[Pet]:
@@ -380,61 +453,112 @@ class PetDB:
     # New comprehensive interaction methods
     @staticmethod
     async def feed_pet(pet_id: str) -> Optional[Pet]:
-        """Comprehensive method to handle feeding a pet"""
+        """Feed the pet, updating its mood and last feed time"""
         try:
-            print(f"[DB] Processing feed action for pet: {pet_id}")
-            
-            # Update pet's feeding timestamp and mood
-            await PetDB.update_last_fed(pet_id)
-            await PetDB.update_mood(pet_id, "happy")
-            
-            # Record the interaction in memory log
-            await PetDB.add_memory(pet_id, "Pet was fed and enjoyed the meal!")
-            
-            # Increment interaction count and update last interaction time
-            return await PetDB.increment_interaction(pet_id)
-        except Exception as e:
-            print(f"[DB] Error in feed_pet: {str(e)}")
-            return None
-            
-    @staticmethod
-    async def play_with_pet(pet_id: str) -> Optional[Pet]:
-        """Comprehensive method to handle playing with a pet"""
-        try:
-            print(f"[DB] Processing play action for pet: {pet_id}")
-            
-            # Update pet's mood to excited
-            await PetDB.update_mood(pet_id, "excited")
-            
-            # Record the interaction in memory log
-            await PetDB.add_memory(pet_id, "Pet played and had a great time!")
-            
-            # Increment interaction count and update last interaction time
-            return await PetDB.increment_interaction(pet_id)
-        except Exception as e:
-            print(f"[DB] Error in play_with_pet: {str(e)}")
-            return None
-            
-    @staticmethod
-    async def teach_pet(pet_id: str, lesson: str) -> Optional[Pet]:
-        """Comprehensive method to handle teaching a pet something new"""
-        try:
-            print(f"[DB] Processing teach action for pet: {pet_id}, lesson: {lesson}")
-            
-            # Get current pet to update level
+            # Get the pet
             pet = await PetDB.get_pet(pet_id)
             if not pet:
-                print(f"[DB] Pet not found with ID: {pet_id}")
+                return None
+            
+            # Check if the pet's battery is depleted - can't feed a "dead" pet
+            battery_level = getattr(pet, 'batteryLevel', 100) 
+            if battery_level is not None and battery_level <= 0:
+                return pet  # Can't feed a "dead" pet
+                
+            now = datetime.now(timezone.utc)
+            
+            # Update the pet
+            updates = {
+                "lastFed": now,
+                "lastInteraction": now,
+                "mood": MOOD_LEVELS["HAPPY"]  # Feeding always makes pet happy
+            }
+            
+            # Increase battery by 10%
+            await PetDB.update_battery_level(pet_id, 10)
+            
+            # Increment interaction count
+            await PetDB.increment_interaction(pet_id)
+            
+            # Add the memory
+            await PetDB.add_memory(pet_id, "I was fed and it was delicious!")
+            
+            # Update the pet and get the updated version
+            return await PetDB.update_pet(pet_id, updates)
+        except Exception as e:
+            print(f"Error feeding pet: {str(e)}")
+            return None
+
+    @staticmethod
+    async def play_with_pet(pet_id: str) -> Optional[Pet]:
+        """Play with the pet, updating its mood and last interaction time"""
+        try:
+            # Get the pet
+            pet = await PetDB.get_pet(pet_id)
+            if not pet:
                 return None
                 
-            # Add the lesson to pet's memory
-            await PetDB.add_memory(pet_id, f"Learned: {lesson}")
+            # Check if the pet's battery is depleted - can't play with a "dead" pet
+            battery_level = getattr(pet, 'batteryLevel', 100) 
+            if battery_level is not None and battery_level <= 0:
+                return pet  # Can't play with a "dead" pet
             
-            # Increase pet's level
-            await PetDB.update_level(pet_id, pet.level + 1)
+            now = datetime.now(timezone.utc)
             
-            # Increment interaction count and update last interaction time
-            return await PetDB.increment_interaction(pet_id)
+            # Update the pet
+            updates = {
+                "lastInteraction": now,
+                "mood": MOOD_LEVELS["HAPPY"]  # Playing always makes pet happy
+            }
+            
+            # Increase battery by 5%
+            await PetDB.update_battery_level(pet_id, 5)
+            
+            # Increment interaction count
+            await PetDB.increment_interaction(pet_id)
+            
+            # Add the memory
+            await PetDB.add_memory(pet_id, "We played together and it was fun!")
+            
+            # Update the pet and get the updated version
+            return await PetDB.update_pet(pet_id, updates)
         except Exception as e:
-            print(f"[DB] Error in teach_pet: {str(e)}")
+            print(f"Error playing with pet: {str(e)}")
+            return None
+
+    @staticmethod
+    async def teach_pet(pet_id: str, lesson: str) -> Optional[Pet]:
+        """Teach the pet something, updating its level and last interaction time"""
+        try:
+            # Get the pet
+            pet = await PetDB.get_pet(pet_id)
+            if not pet:
+                return None
+                
+            # Check if the pet's battery is depleted - can't teach a "dead" pet
+            battery_level = getattr(pet, 'batteryLevel', 100) 
+            if battery_level is not None and battery_level <= 0:
+                return pet  # Can't teach a "dead" pet
+            
+            now = datetime.now(timezone.utc)
+            
+            # Update the pet
+            updates = {
+                "lastInteraction": now,
+                "level": pet.level + 1  # Teaching increases pet's level
+            }
+            
+            # Increase battery by 7%
+            await PetDB.update_battery_level(pet_id, 7)
+            
+            # Increment interaction count
+            await PetDB.increment_interaction(pet_id)
+            
+            # Add the memory of what was taught
+            await PetDB.add_memory(pet_id, f"I learned about {lesson}")
+            
+            # Update the pet and get the updated version
+            return await PetDB.update_pet(pet_id, updates)
+        except Exception as e:
+            print(f"Error teaching pet: {str(e)}")
             return None 

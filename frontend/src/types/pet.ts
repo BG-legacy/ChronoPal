@@ -6,6 +6,7 @@ export interface Pet {
   mood: string;
   level: number;
   sassLevel: number;
+  batteryLevel: number; // Battery level from 0-100
   userId: string;
   lastFed: string;
   lastInteraction: string;
