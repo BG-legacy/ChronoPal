@@ -541,11 +541,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="retro-container">
-      {/* Browser Notice */}
-      <div className="retro-browser-notice">
-        Best viewed in Netscape Navigator 4.0 or Internet Explorer 5.0 at 800x600 resolution
-      </div>
-
       {/* Main Header */}
       <div className="retro-header">
         <h1 className="site-title">ChronoPal</h1>
