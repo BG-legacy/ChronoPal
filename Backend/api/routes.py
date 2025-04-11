@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, status, Header, Request
-from typing import Optional
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import os
@@ -800,4 +800,28 @@ async def reset_pet(current_user: User = Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset pet: {str(e)}"
-        ) 
+        )
+
+# Test endpoint
+@router.get("/test")
+async def test_endpoint():
+    """Test endpoint to verify API is running"""
+    return {"status": "ok", "message": "API is running"}
+
+# MongoDB test endpoint
+@router.get("/test-mongodb")
+async def test_mongodb():
+    """Test endpoint to verify MongoDB connection"""
+    try:
+        # Try to get a pet - doesn't matter if it exists, just testing the connection
+        pet = await PetDB.get_pets_by_user("test")
+        return {
+            "status": "ok", 
+            "message": "MongoDB connection successful",
+            "connection_info": {
+                "database": os.getenv("MONGODB_DB_NAME"),
+                "uri": "...@" + (os.getenv("MONGODB_URI") or "").split("@")[-1] if "@" in (os.getenv("MONGODB_URI") or "") else "Not configured"
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"MongoDB connection failed: {str(e)}") 

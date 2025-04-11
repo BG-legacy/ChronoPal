@@ -38,7 +38,9 @@ try:
         MONGODB_URI,
         serverSelectionTimeoutMS=10000,
         connectTimeoutMS=10000,
-        socketTimeoutMS=20000
+        socketTimeoutMS=20000,
+        tls=True,
+        tlsCAFile=certifi.where()
     )
 
     # Test the connection - only log errors, don't fail
@@ -64,7 +66,9 @@ try:
         MONGODB_URI,
         serverSelectionTimeoutMS=10000,
         connectTimeoutMS=10000,
-        socketTimeoutMS=20000
+        socketTimeoutMS=20000,
+        tls=True,
+        tlsCAFile=certifi.where()
     )
 
     async_db = async_client[DB_NAME]
